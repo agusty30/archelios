@@ -25,6 +25,7 @@ export const Route = createFileRoute("/wallets")({
 });
 
 const CHAINS = [
+  "ARC-TESTNET",
   "MATIC-AMOY",
   "ETH-SEPOLIA",
   "ARB-SEPOLIA",
@@ -32,6 +33,7 @@ const CHAINS = [
   "AVAX-FUJI",
   "SOL-DEVNET",
 ];
+
 
 function WalletsPage() {
   const qc = useQueryClient();
