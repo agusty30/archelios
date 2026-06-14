@@ -1,4 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
+import { publicEncrypt, constants, randomBytes } from "node:crypto";
+
+
 
 const CIRCLE_BASE = "https://api-sandbox.circle.com";
 
@@ -149,3 +152,105 @@ export const listTransfers = createServerFn({ method: "GET" }).handler(async () 
     return [] as any[];
   }
 });
+
+/* ===================== Dev-Controlled Wallets ===================== */
+
+let _publicKeyPem: string | null = null;
+async function getEntityPublicKey(): Promise<string> {
+  if (_publicKeyPem) return _publicKeyPem;
+  const json = await circleFetch("/v1/w3s/config/entity/publicKey");
+  const pem = json?.data?.publicKey;
+  if (!pem) throw new Error("Failed to fetch Circle entity public key");
+  _publicKeyPem = pem;
+  return pem;
+}
+
+async function makeEntitySecretCiphertext(): Promise<string> {
+  const secretHex = process.env.CIRCLE_ENTITY_SECRET;
+  if (!secretHex) throw new Error("CIRCLE_ENTITY_SECRET not configured");
+  if (!/^[0-9a-fA-F]{64}$/.test(secretHex.trim())) {
+    throw new Error("CIRCLE_ENTITY_SECRET must be 64 hex characters");
+  }
+  const pem = await getEntityPublicKey();
+  const encrypted = publicEncrypt(
+    {
+      key: pem,
+      oaepHash: "sha256",
+      padding: constants.RSA_PKCS1_OAEP_PADDING,
+    },
+    Buffer.from(secretHex.trim(), "hex"),
+  );
+  return encrypted.toString("base64");
+}
+
+/** Create a wallet set (container for dev-controlled wallets). */
+export const createWalletSet = createServerFn({ method: "POST" })
+  .inputValidator((d: { name: string }) => {
+    if (!d?.name?.trim()) throw new Error("Wallet set name required");
+    return d;
+  })
+  .handler(async ({ data }) => {
+    const entitySecretCiphertext = await makeEntitySecretCiphertext();
+    const json = await circleFetch("/v1/w3s/developer/walletSets", {
+      method: "POST",
+      body: JSON.stringify({
+        idempotencyKey: crypto.randomUUID(),
+        entitySecretCiphertext,
+        name: data.name.trim(),
+      }),
+    });
+    return json?.data?.walletSet;
+  });
+
+/** Create one or more dev-controlled wallets in a wallet set. */
+export const createDevWallet = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: {
+      walletSetId: string;
+      blockchains?: string[];
+      count?: number;
+      accountType?: "SCA" | "EOA";
+    }) => {
+      if (!d?.walletSetId) throw new Error("walletSetId required");
+      return d;
+    },
+  )
+  .handler(async ({ data }) => {
+    const entitySecretCiphertext = await makeEntitySecretCiphertext();
+    const body = {
+      idempotencyKey: crypto.randomUUID(),
+      entitySecretCiphertext,
+      walletSetId: data.walletSetId,
+      blockchains: data.blockchains ?? ["MATIC-AMOY"],
+      count: data.count ?? 1,
+      accountType: data.accountType ?? "SCA",
+    };
+    const json = await circleFetch("/v1/w3s/developer/wallets", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return json?.data?.wallets ?? [];
+  });
+
+/** List all wallet sets. */
+export const listWalletSets = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    const json = await circleFetch("/v1/w3s/walletSets?pageSize=20");
+    return (json?.data?.walletSets ?? []) as any[];
+  } catch (e: any) {
+    return [] as any[];
+  }
+});
+
+/** List wallets (optionally filtered by walletSetId). */
+export const listDevWallets = createServerFn({ method: "POST" })
+  .inputValidator((d: { walletSetId?: string }) => d ?? {})
+  .handler(async ({ data }) => {
+    const qs = data?.walletSetId ? `?walletSetId=${encodeURIComponent(data.walletSetId)}&pageSize=50` : "?pageSize=50";
+    try {
+      const json = await circleFetch(`/v1/w3s/wallets${qs}`);
+      return (json?.data?.wallets ?? []) as any[];
+    } catch (e: any) {
+      return [] as any[];
+    }
+  });
