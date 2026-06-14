@@ -39,7 +39,8 @@ function WalletsPage() {
   const qc = useQueryClient();
   const [name, setName] = useState("Treasury Set");
   const [activeSetId, setActiveSetId] = useState<string>("");
-  const [chain, setChain] = useState("MATIC-AMOY");
+  const [chain, setChain] = useState("ARC-TESTNET");
+
   const [accountType, setAccountType] = useState<"SCA" | "EOA">("SCA");
 
   const { data: sets = [] } = useQuery({ queryKey: ["walletSets"], queryFn: () => listWalletSets() });
