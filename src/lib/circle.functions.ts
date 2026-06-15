@@ -3,7 +3,7 @@ import { publicEncrypt, constants, randomBytes } from "node:crypto";
 
 
 
-const CIRCLE_BASE = "https://api-sandbox.circle.com";
+const CIRCLE_BASE = "https://api.circle.com";
 
 function authHeaders() {
   const rawKey = process.env.CIRCLE_API_KEY?.trim();
