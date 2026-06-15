@@ -6,7 +6,8 @@ import { publicEncrypt, constants, randomBytes } from "node:crypto";
 const CIRCLE_BASE = "https://api-sandbox.circle.com";
 
 function authHeaders() {
-  const key = process.env.CIRCLE_API_KEY;
+  const rawKey = process.env.CIRCLE_API_KEY?.trim();
+  const key = rawKey && rawKey.split(":").length === 2 ? `TEST_API_KEY:${rawKey}` : rawKey;
   if (!key) throw new Error("CIRCLE_API_KEY not configured");
   return {
     Authorization: `Bearer ${key}`,
