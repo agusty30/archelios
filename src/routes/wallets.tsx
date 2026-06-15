@@ -6,6 +6,8 @@ import {
   createDevWallet,
   listWalletSets,
   listDevWallets,
+  sendDevWalletTransfer,
+  getWalletBalances,
 } from "@/lib/circle.functions";
 
 export const Route = createFileRoute("/wallets")({
