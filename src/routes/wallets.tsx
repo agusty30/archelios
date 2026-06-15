@@ -72,6 +72,24 @@ function WalletsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["devWallets"] }),
   });
 
+  const { data: balances = [], refetch: refetchBalances } = useQuery({
+    queryKey: ["walletBalances", sendWalletId],
+    queryFn: () => getWalletBalances({ data: { walletId: sendWalletId } }),
+    enabled: !!sendWalletId,
+  });
+
+  const sendTx = useMutation({
+    mutationFn: () =>
+      sendDevWalletTransfer({
+        data: {
+          walletId: sendWalletId,
+          destinationAddress: recipient,
+          amountUsd: Number(amount),
+        },
+      }),
+    onSuccess: () => refetchBalances(),
+  });
+
   return (
     <main className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-3xl space-y-8">
