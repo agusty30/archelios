@@ -255,3 +255,71 @@ export const listDevWallets = createServerFn({ method: "POST" })
       return [] as any[];
     }
   });
+
+/** List token balances for a dev-controlled wallet. */
+export const getWalletBalances = createServerFn({ method: "POST" })
+  .inputValidator((d: { walletId: string }) => {
+    if (!d?.walletId) throw new Error("walletId required");
+    return d;
+  })
+  .handler(async ({ data }) => {
+    const json = await circleFetch(
+      `/v1/w3s/wallets/${encodeURIComponent(data.walletId)}/balances`,
+    );
+    return (json?.data?.tokenBalances ?? []) as any[];
+  });
+
+/**
+ * Send a USDC transfer from a dev-controlled wallet to a blockchain address.
+ * Automatically resolves the USDC tokenId on the wallet's blockchain.
+ */
+export const sendDevWalletTransfer = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: {
+      walletId: string;
+      destinationAddress: string;
+      amountUsd: number;
+      tokenId?: string;
+      feeLevel?: "LOW" | "MEDIUM" | "HIGH";
+    }) => {
+      if (!d?.walletId) throw new Error("walletId required");
+      if (!d?.destinationAddress?.trim()) throw new Error("destinationAddress required");
+      if (!d?.amountUsd || d.amountUsd <= 0) throw new Error("Invalid amount");
+      return d;
+    },
+  )
+  .handler(async ({ data }) => {
+    // Resolve USDC tokenId on this wallet if not provided
+    let tokenId = data.tokenId;
+    if (!tokenId) {
+      const balances = await circleFetch(
+        `/v1/w3s/wallets/${encodeURIComponent(data.walletId)}/balances`,
+      );
+      const list = (balances?.data?.tokenBalances ?? []) as any[];
+      const usdc = list.find(
+        (b) => (b.token?.symbol || "").toUpperCase() === "USDC",
+      );
+      if (!usdc?.token?.id) {
+        throw new Error(
+          "No USDC token found on this wallet. Fund it with testnet USDC from the Circle faucet first.",
+        );
+      }
+      tokenId = usdc.token.id as string;
+    }
+
+    const entitySecretCiphertext = await makeEntitySecretCiphertext();
+    const body = {
+      idempotencyKey: crypto.randomUUID(),
+      entitySecretCiphertext,
+      walletId: data.walletId,
+      destinationAddress: data.destinationAddress.trim(),
+      tokenId,
+      amounts: [data.amountUsd.toFixed(2)],
+      feeLevel: data.feeLevel ?? "MEDIUM",
+    };
+    const json = await circleFetch("/v1/w3s/developer/transactions/transfer", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return json?.data;
+  });
