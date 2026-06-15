@@ -45,6 +45,11 @@ function WalletsPage() {
 
   const [accountType, setAccountType] = useState<"SCA" | "EOA">("SCA");
 
+  // Test transfer state
+  const [sendWalletId, setSendWalletId] = useState<string>("");
+  const [recipient, setRecipient] = useState<string>("0x000000000000000000000000000000000000dEaD");
+  const [amount, setAmount] = useState<string>("0.10");
+
   const { data: sets = [] } = useQuery({ queryKey: ["walletSets"], queryFn: () => listWalletSets() });
   const { data: wallets = [] } = useQuery({
     queryKey: ["devWallets", activeSetId],
