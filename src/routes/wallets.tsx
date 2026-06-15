@@ -6,6 +6,8 @@ import {
   createDevWallet,
   listWalletSets,
   listDevWallets,
+  sendDevWalletTransfer,
+  getWalletBalances,
 } from "@/lib/circle.functions";
 
 export const Route = createFileRoute("/wallets")({
@@ -43,6 +45,11 @@ function WalletsPage() {
 
   const [accountType, setAccountType] = useState<"SCA" | "EOA">("SCA");
 
+  // Test transfer state
+  const [sendWalletId, setSendWalletId] = useState<string>("");
+  const [recipient, setRecipient] = useState<string>("0x000000000000000000000000000000000000dEaD");
+  const [amount, setAmount] = useState<string>("0.10");
+
   const { data: sets = [] } = useQuery({ queryKey: ["walletSets"], queryFn: () => listWalletSets() });
   const { data: wallets = [] } = useQuery({
     queryKey: ["devWallets", activeSetId],
@@ -63,6 +70,24 @@ function WalletsPage() {
         data: { walletSetId: activeSetId, blockchains: [chain], count: 1, accountType },
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["devWallets"] }),
+  });
+
+  const { data: balances = [], refetch: refetchBalances } = useQuery({
+    queryKey: ["walletBalances", sendWalletId],
+    queryFn: () => getWalletBalances({ data: { walletId: sendWalletId } }),
+    enabled: !!sendWalletId,
+  });
+
+  const sendTx = useMutation({
+    mutationFn: () =>
+      sendDevWalletTransfer({
+        data: {
+          walletId: sendWalletId,
+          destinationAddress: recipient,
+          amountUsd: Number(amount),
+        },
+      }),
+    onSuccess: () => refetchBalances(),
   });
 
   return (
@@ -165,14 +190,91 @@ function WalletsPage() {
           ) : (
             <div className="divide-y divide-border">
               {wallets.map((w: any) => (
-                <div key={w.id} className="py-3 text-sm">
-                  <p className="font-mono text-xs text-muted-foreground">{w.id}</p>
-                  <p className="font-mono break-all">{w.address}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {w.blockchain} · {w.accountType} · {w.state}
-                  </p>
+                <div key={w.id} className="py-3 text-sm flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs text-muted-foreground">{w.id}</p>
+                    <p className="font-mono break-all">{w.address}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {w.blockchain} · {w.accountType} · {w.state}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSendWalletId(w.id)}
+                    className="shrink-0 rounded-md border border-input px-2 py-1 text-xs hover:bg-accent"
+                  >
+                    Use for test send
+                  </button>
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-2xl bg-card p-6 shadow space-y-4">
+          <h2 className="font-medium">4. Send a test USDC transfer</h2>
+          <p className="text-xs text-muted-foreground">
+            Sends from a dev-controlled wallet (e.g. ARC Testnet) to any blockchain address.
+            The wallet must hold testnet USDC — fund via Circle's faucet first.
+          </p>
+          <label className="block text-sm space-y-1">
+            <span className="text-xs uppercase text-muted-foreground">Source wallet ID</span>
+            <input
+              value={sendWalletId}
+              onChange={(e) => setSendWalletId(e.target.value)}
+              placeholder="Pick a wallet above or paste a wallet ID"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-xs"
+            />
+          </label>
+          {sendWalletId && (
+            <div className="rounded-lg bg-muted/40 p-3 text-xs">
+              <p className="font-medium mb-1">Balances</p>
+              {balances.length === 0 ? (
+                <p className="text-muted-foreground">No tokens yet — fund the wallet from a faucet.</p>
+              ) : (
+                <ul className="space-y-0.5">
+                  {balances.map((b: any, i: number) => (
+                    <li key={i} className="font-mono">
+                      {b.amount} {b.token?.symbol} · {b.token?.blockchain}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm space-y-1 col-span-2">
+              <span className="text-xs uppercase text-muted-foreground">Recipient address</span>
+              <input
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-xs"
+              />
+            </label>
+            <label className="text-sm space-y-1">
+              <span className="text-xs uppercase text-muted-foreground">Amount (USDC)</span>
+              <input
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                inputMode="decimal"
+                className="w-full rounded-lg border border-input bg-background px-3 py-2"
+              />
+            </label>
+          </div>
+          <button
+            onClick={() => sendTx.mutate()}
+            disabled={sendTx.isPending || !sendWalletId || !recipient || !amount}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          >
+            {sendTx.isPending ? "Sending…" : "Send test USDC"}
+          </button>
+          {sendTx.error && (
+            <p className="text-sm text-destructive">{(sendTx.error as Error).message}</p>
+          )}
+          {sendTx.data && (
+            <div className="rounded-lg bg-muted/40 p-3 text-xs space-y-1">
+              <p className="font-medium">Transaction submitted ✓</p>
+              <p className="font-mono break-all">id: {sendTx.data.id}</p>
+              <p>state: {sendTx.data.state}</p>
             </div>
           )}
         </section>
