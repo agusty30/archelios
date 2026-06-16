@@ -71,20 +71,43 @@ export const getQuote = createServerFn({ method: "POST" })
     };
   });
 
-/** Live Circle business account USDC balance (sandbox). */
+/** Pick the first dev-controlled wallet that holds USDC (fallback: first wallet). */
+async function pickDefaultWallet(): Promise<{ wallet: any; usdc: any | null } | null> {
+  const wlist = await circleFetch("/v1/w3s/wallets?pageSize=50");
+  const wallets = (wlist?.data?.wallets ?? []) as any[];
+  if (wallets.length === 0) return null;
+  for (const w of wallets) {
+    try {
+      const b = await circleFetch(`/v1/w3s/wallets/${encodeURIComponent(w.id)}/balances`);
+      const list = (b?.data?.tokenBalances ?? []) as any[];
+      const usdc = list.find((x) => (x.token?.symbol || "").toUpperCase() === "USDC");
+      if (usdc) return { wallet: w, usdc };
+    } catch {}
+  }
+  return { wallet: wallets[0], usdc: null };
+}
+
+/** Treasury USDC balance — uses the dev-controlled wallet (W3S). */
 export const getBalance = createServerFn({ method: "GET" }).handler(async () => {
   try {
-    const json = await circleFetch("/v1/businessAccount/balances");
-    const usdc = (json?.data?.available ?? []).find(
-      (b: any) => b.currency === "USD",
-    );
-    return { available: usdc?.amount ?? "0.00", currency: "USD" };
+    const picked = await pickDefaultWallet();
+    if (!picked) {
+      return {
+        available: "0.00",
+        currency: "USD",
+        error: "No dev-controlled wallet found. Create one in /wallets first.",
+      };
+    }
+    return {
+      available: picked.usdc?.amount ?? "0.00",
+      currency: "USD",
+    };
   } catch (e: any) {
     return { available: "0.00", currency: "USD", error: e.message as string };
   }
 });
 
-/** Create a USDC payout (Circle sandbox: master wallet -> blockchain address). */
+/** Send USDC from the default dev-controlled wallet to a blockchain address. */
 export const sendTransfer = createServerFn({ method: "POST" })
   .inputValidator(
     (d: {
@@ -102,34 +125,31 @@ export const sendTransfer = createServerFn({ method: "POST" })
     },
   )
   .handler(async ({ data }) => {
-    // 1) Resolve the sandbox master wallet ID
-    const cfg = await circleFetch("/v1/configuration");
-    const masterWalletId = cfg?.data?.payments?.masterWalletId;
-    if (!masterWalletId) throw new Error("No master wallet configured in sandbox");
+    const picked = await pickDefaultWallet();
+    if (!picked) throw new Error("No dev-controlled wallet found. Create one in /wallets first.");
+    if (!picked.usdc?.token?.id) {
+      throw new Error("Treasury wallet has no USDC. Fund it via the Circle faucet first.");
+    }
 
-    const chain = data.chain ?? "MATIC";
-    const idempotencyKey = crypto.randomUUID();
-
+    const entitySecretCiphertext = await makeEntitySecretCiphertext();
     const body = {
-      idempotencyKey,
-      source: { type: "wallet", id: masterWalletId },
-      destination: {
-        type: "blockchain",
-        address: data.recipientAddress.trim(),
-        chain,
-      },
-      amount: { amount: data.amountUsd.toFixed(2), currency: "USD" },
+      idempotencyKey: crypto.randomUUID(),
+      entitySecretCiphertext,
+      walletId: picked.wallet.id,
+      destinationAddress: data.recipientAddress.trim(),
+      tokenId: picked.usdc.token.id,
+      amounts: [data.amountUsd.toFixed(2)],
+      feeLevel: "MEDIUM",
     };
-
-    const json = await circleFetch("/v1/transfers", {
+    const json = await circleFetch("/v1/w3s/developer/transactions/transfer", {
       method: "POST",
       body: JSON.stringify(body),
     });
-
+    const tx = json?.data ?? {};
     return {
-      id: json?.data?.id as string,
-      status: json?.data?.status as string,
-      createDate: json?.data?.createDate as string,
+      id: (tx.id ?? "") as string,
+      status: (tx.state ?? "PENDING") as string,
+      createDate: new Date().toISOString(),
       recipientName: data.recipientName,
       corridor: data.corridor,
     };
@@ -141,15 +161,23 @@ export const getTransfer = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data }) => {
-    const json = await circleFetch(`/v1/transfers/${data.id}`);
-    return json?.data;
+    const json = await circleFetch(`/v1/w3s/transactions/${encodeURIComponent(data.id)}`);
+    return json?.data?.transaction;
   });
 
+/** Recent W3S transactions, mapped to the UI's transfer shape. */
 export const listTransfers = createServerFn({ method: "GET" }).handler(async () => {
   try {
-    const json = await circleFetch("/v1/transfers?pageSize=20");
-    return (json?.data ?? []) as any[];
-  } catch (e: any) {
+    const json = await circleFetch("/v1/w3s/transactions?pageSize=20");
+    const txs = (json?.data?.transactions ?? []) as any[];
+    return txs.map((t) => ({
+      id: t.id,
+      status: (t.state || "").toLowerCase(),
+      createDate: t.createDate,
+      destination: { chain: t.blockchain },
+      amount: { amount: Array.isArray(t.amounts) ? t.amounts[0] : t.amount },
+    }));
+  } catch {
     return [] as any[];
   }
 });
