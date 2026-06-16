@@ -170,7 +170,7 @@ function Home() {
 
         <RecentTransfers transfers={transfers} />
 
-        <RailsCallout />
+        <SmeCallout />
       </div>
 
       {confirm && quoteQuery.data && (
