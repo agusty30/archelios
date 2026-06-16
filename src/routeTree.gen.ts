@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WalletsRouteImport } from './routes/wallets'
+import { Route as SmeRouteImport } from './routes/sme'
 import { Route as IndexRouteImport } from './routes/index'
 
 const WalletsRoute = WalletsRouteImport.update({
   id: '/wallets',
   path: '/wallets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SmeRoute = SmeRouteImport.update({
+  id: '/sme',
+  path: '/sme',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -25,27 +31,31 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/sme': typeof SmeRoute
   '/wallets': typeof WalletsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/sme': typeof SmeRoute
   '/wallets': typeof WalletsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/sme': typeof SmeRoute
   '/wallets': typeof WalletsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/wallets'
+  fullPaths: '/' | '/sme' | '/wallets'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/wallets'
-  id: '__root__' | '/' | '/wallets'
+  to: '/' | '/sme' | '/wallets'
+  id: '__root__' | '/' | '/sme' | '/wallets'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SmeRoute: typeof SmeRoute
   WalletsRoute: typeof WalletsRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/wallets'
       fullPath: '/wallets'
       preLoaderRoute: typeof WalletsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sme': {
+      id: '/sme'
+      path: '/sme'
+      fullPath: '/sme'
+      preLoaderRoute: typeof SmeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SmeRoute: SmeRoute,
   WalletsRoute: WalletsRoute,
 }
 export const routeTree = rootRouteImport
