@@ -392,24 +392,27 @@ function StatusDot({ status }: { status: string }) {
   return <span className={`size-2 rounded-full ${cls}`} />;
 }
 
-function RailsCallout() {
+function SmeCallout() {
   const items = [
-    { k: "USDC", v: "Primary stablecoin rail" },
-    { k: "Circle Wallets", v: "Embedded UX for senders" },
-    { k: "CCTP + Bridge Kit", v: "Cross-chain USDC routing" },
-    { k: "Circle Gateway", v: "Treasury & settlement orchestration" },
+    { k: "Invoice factoring", v: "Advance USDC against receivables, automated waterfall on repayment." },
+    { k: "Trade escrow", v: "Milestone-based USDC release for import/export settlement." },
+    { k: "PO financing", v: "Fund purchase orders, unlock on proof-of-delivery." },
+    { k: "Credit passport", v: "On-chain transaction & repayment history for SMEs." },
   ];
   return (
     <section className="rounded-3xl border border-border bg-accent/40 p-5">
-      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
-        Built on Circle infrastructure
-      </p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          SME finance & trade workflows
+        </p>
+        <a href="/sme" className="text-xs font-medium text-primary hover:underline">Open hub →</a>
+      </div>
       <div className="grid grid-cols-2 gap-3">
         {items.map((i) => (
-          <div key={i.k} className="rounded-xl bg-card/70 px-3 py-2.5">
+          <a key={i.k} href="/sme" className="rounded-xl bg-card/70 px-3 py-2.5 hover:bg-card transition">
             <p className="text-sm font-medium">{i.k}</p>
             <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">{i.v}</p>
-          </div>
+          </a>
         ))}
       </div>
     </section>
