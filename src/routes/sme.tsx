@@ -212,7 +212,7 @@ function useDeals(kind: DealKind) {
 function FactoringPanel({ sourceWalletId }: { sourceWalletId: string }) {
   const { list, upsert, remove } = useDeals("factoring");
   const [counterparty, setCounterparty] = useState("");
-  const [destinationAddress, setDestinationAddress] = useState("");
+  const [destinationAddress, setDestinationAddress] = useState("0xa66fc57404cd34342fe5d9a92598ee48b6eff898");
   const [face, setFace] = useState("1000");
   const [advanceBps, setAdvanceBps] = useState("8500");
   const [feeBps, setFeeBps] = useState("200");
@@ -361,7 +361,7 @@ function FactoringDealCard({
 function EscrowPanel({ sourceWalletId }: { sourceWalletId: string }) {
   const { list, upsert, remove } = useDeals("escrow");
   const [counterparty, setCounterparty] = useState("");
-  const [destinationAddress, setDestinationAddress] = useState("");
+  const [destinationAddress, setDestinationAddress] = useState("0xa66fc57404cd34342fe5d9a92598ee48b6eff898");
   const [m1, setM1] = useState("300");
   const [m2, setM2] = useState("400");
   const [m3, setM3] = useState("300");
@@ -491,7 +491,7 @@ function EscrowDealCard({
 function PoPanel({ sourceWalletId }: { sourceWalletId: string }) {
   const { list, upsert, remove } = useDeals("po");
   const [supplier, setSupplier] = useState("");
-  const [destinationAddress, setDestinationAddress] = useState("");
+  const [destinationAddress, setDestinationAddress] = useState("0xa66fc57404cd34342fe5d9a92598ee48b6eff898");
   const [face, setFace] = useState("5000");
 
   const create = () => {

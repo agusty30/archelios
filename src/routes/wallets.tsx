@@ -47,7 +47,7 @@ function WalletsPage() {
 
   // Test transfer state
   const [sendWalletId, setSendWalletId] = useState<string>("");
-  const [recipient, setRecipient] = useState<string>("0x000000000000000000000000000000000000dEaD");
+  const [recipient, setRecipient] = useState<string>("0xa66fc57404cd34342fe5d9a92598ee48b6eff898");
   const [amount, setAmount] = useState<string>("0.10");
 
   const { data: sets = [] } = useQuery({ queryKey: ["walletSets"], queryFn: () => listWalletSets() });
