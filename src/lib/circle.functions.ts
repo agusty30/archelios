@@ -38,6 +38,7 @@ const CORRIDORS = {
   MXN: { name: "Mexico", flag: "🇲🇽", rate: 17.18, symbol: "$" },
   KES: { name: "Kenya", flag: "🇰🇪", rate: 129.4, symbol: "KSh" },
   EUR: { name: "Eurozone", flag: "🇪🇺", rate: 0.92, symbol: "€" },
+  IDR: { name: "Indonesia", flag: "🇮🇩", rate: 16250, symbol: "Rp" },
 } as const;
 
 export type CorridorCode = keyof typeof CORRIDORS;
