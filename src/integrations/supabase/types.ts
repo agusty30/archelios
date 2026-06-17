@@ -14,7 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_wallets: {
+        Row: {
+          address: string
+          blockchain: string
+          circle_wallet_id: string
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          blockchain?: string
+          circle_wallet_id: string
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          blockchain?: string
+          circle_wallet_id?: string
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
