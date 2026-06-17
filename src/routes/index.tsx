@@ -205,11 +205,19 @@ function Header({ balance, hasError }: { balance?: string; hasError: boolean }) 
             <p className="text-[11px] text-muted-foreground mt-0.5">Powered by Circle · USDC</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Treasury</p>
-          <p className="font-mono text-sm tabular-nums">
-            {hasError ? "—" : `$${formatNum(parseFloat(balance ?? "0"))}`}
-          </p>
+        <div className="flex items-center gap-3">
+          <a
+            href="/my-wallet"
+            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            My Wallet
+          </a>
+          <div className="text-right">
+            <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Treasury</p>
+            <p className="font-mono text-sm tabular-nums">
+              {hasError ? "—" : `$${formatNum(parseFloat(balance ?? "0"))}`}
+            </p>
+          </div>
         </div>
       </div>
     </header>
