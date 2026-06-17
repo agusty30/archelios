@@ -11,7 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WalletsRouteImport } from './routes/wallets'
 import { Route as SmeRouteImport } from './routes/sme'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedMyWalletRouteImport } from './routes/_authenticated/my-wallet'
 
 const WalletsRoute = WalletsRouteImport.update({
   id: '/wallets',
@@ -23,38 +26,68 @@ const SmeRoute = SmeRouteImport.update({
   path: '/sme',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedMyWalletRoute = AuthenticatedMyWalletRouteImport.update({
+  id: '/my-wallet',
+  path: '/my-wallet',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/sme': typeof SmeRoute
   '/wallets': typeof WalletsRoute
+  '/my-wallet': typeof AuthenticatedMyWalletRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/sme': typeof SmeRoute
   '/wallets': typeof WalletsRoute
+  '/my-wallet': typeof AuthenticatedMyWalletRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
   '/sme': typeof SmeRoute
   '/wallets': typeof WalletsRoute
+  '/_authenticated/my-wallet': typeof AuthenticatedMyWalletRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sme' | '/wallets'
+  fullPaths: '/' | '/auth' | '/sme' | '/wallets' | '/my-wallet'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sme' | '/wallets'
-  id: '__root__' | '/' | '/sme' | '/wallets'
+  to: '/' | '/auth' | '/sme' | '/wallets' | '/my-wallet'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/sme'
+    | '/wallets'
+    | '/_authenticated/my-wallet'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
   SmeRoute: typeof SmeRoute
   WalletsRoute: typeof WalletsRoute
 }
@@ -75,6 +108,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SmeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -82,11 +129,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/my-wallet': {
+      id: '/_authenticated/my-wallet'
+      path: '/my-wallet'
+      fullPath: '/my-wallet'
+      preLoaderRoute: typeof AuthenticatedMyWalletRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedMyWalletRoute: typeof AuthenticatedMyWalletRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedMyWalletRoute: AuthenticatedMyWalletRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
   SmeRoute: SmeRoute,
   WalletsRoute: WalletsRoute,
 }
