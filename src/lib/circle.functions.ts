@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { publicEncrypt, constants, randomBytes } from "node:crypto";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 
 
@@ -89,7 +90,9 @@ async function pickDefaultWallet(): Promise<{ wallet: any; usdc: any | null } | 
 }
 
 /** Treasury USDC balance — uses the dev-controlled wallet (W3S). */
-export const getBalance = createServerFn({ method: "GET" }).handler(async () => {
+export const getBalance = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
   try {
     const picked = await pickDefaultWallet();
     if (!picked) {
@@ -110,6 +113,7 @@ export const getBalance = createServerFn({ method: "GET" }).handler(async () => 
 
 /** Send USDC from the default dev-controlled wallet to a blockchain address. */
 export const sendTransfer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       amountUsd: number;
@@ -157,6 +161,7 @@ export const sendTransfer = createServerFn({ method: "POST" })
   });
 
 export const getTransfer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => {
     if (!d?.id) throw new Error("id required");
     return d;
@@ -215,6 +220,7 @@ async function makeEntitySecretCiphertext(): Promise<string> {
 
 /** Create a wallet set (container for dev-controlled wallets). */
 export const createWalletSet = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { name: string }) => {
     if (!d?.name?.trim()) throw new Error("Wallet set name required");
     return d;
@@ -234,6 +240,7 @@ export const createWalletSet = createServerFn({ method: "POST" })
 
 /** Create one or more dev-controlled wallets in a wallet set. */
 export const createDevWallet = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       walletSetId: string;
@@ -263,7 +270,9 @@ export const createDevWallet = createServerFn({ method: "POST" })
   });
 
 /** List all wallet sets. */
-export const listWalletSets = createServerFn({ method: "GET" }).handler(async () => {
+export const listWalletSets = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
   try {
     const json = await circleFetch("/v1/w3s/walletSets?pageSize=20");
     return (json?.data?.walletSets ?? []) as any[];
@@ -274,6 +283,7 @@ export const listWalletSets = createServerFn({ method: "GET" }).handler(async ()
 
 /** List wallets (optionally filtered by walletSetId). */
 export const listDevWallets = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { walletSetId?: string }) => d ?? {})
   .handler(async ({ data }) => {
     const qs = data?.walletSetId ? `?walletSetId=${encodeURIComponent(data.walletSetId)}&pageSize=50` : "?pageSize=50";
@@ -287,6 +297,7 @@ export const listDevWallets = createServerFn({ method: "POST" })
 
 /** List token balances for a dev-controlled wallet. */
 export const getWalletBalances = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { walletId: string }) => {
     if (!d?.walletId) throw new Error("walletId required");
     return d;
@@ -303,6 +314,7 @@ export const getWalletBalances = createServerFn({ method: "POST" })
  * Automatically resolves the USDC tokenId on the wallet's blockchain.
  */
 export const sendDevWalletTransfer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       walletId: string;
