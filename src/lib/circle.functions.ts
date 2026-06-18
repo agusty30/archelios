@@ -270,7 +270,9 @@ export const createDevWallet = createServerFn({ method: "POST" })
   });
 
 /** List all wallet sets. */
-export const listWalletSets = createServerFn({ method: "GET" }).handler(async () => {
+export const listWalletSets = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
   try {
     const json = await circleFetch("/v1/w3s/walletSets?pageSize=20");
     return (json?.data?.walletSets ?? []) as any[];
