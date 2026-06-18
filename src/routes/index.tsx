@@ -4,8 +4,6 @@ import { useState, useMemo } from "react";
 import {
   getCorridors,
   getQuote,
-  getBalance,
-  sendTransfer,
   listTransfers,
   type CorridorCode,
 } from "@/lib/circle.functions";
@@ -33,7 +31,6 @@ export const Route = createFileRoute("/")({
   loader: async ({ context }) => {
     await Promise.all([
       context.queryClient.prefetchQuery({ queryKey: ["corridors"], queryFn: () => getCorridors() }),
-      context.queryClient.prefetchQuery({ queryKey: ["balance"], queryFn: () => getBalance() }),
       context.queryClient.prefetchQuery({ queryKey: ["transfers"], queryFn: () => listTransfers() }),
     ]);
     return null;
@@ -42,13 +39,8 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const qc = useQueryClient();
+  const router = useRouter();
   const { data: corridors = [] } = useQuery({ queryKey: ["corridors"], queryFn: () => getCorridors() });
-  const { data: balance } = useQuery({
-    queryKey: ["balance"],
-    queryFn: () => getBalance(),
-    refetchInterval: 15000,
-  });
   const { data: transfers = [] } = useQuery({
     queryKey: ["transfers"],
     queryFn: () => listTransfers(),
@@ -72,17 +64,10 @@ function Home() {
   });
 
   const sendMut = useMutation({
-    mutationFn: () =>
-      sendTransfer({
-        data: { amountUsd: amountNum, corridor, recipientName, recipientAddress, chain },
-      }),
-    onSuccess: (res) => {
-      setLastTransfer({ id: res.id, status: res.status, recipientName: res.recipientName });
-      setConfirm(false);
-      setRecipientName("");
-      setRecipientAddress("");
-      qc.invalidateQueries({ queryKey: ["transfers"] });
-      qc.invalidateQueries({ queryKey: ["balance"] });
+    mutationFn: async () => {
+      // Public users must sign in and use their own wallet — never the treasury.
+      router.navigate({ to: "/my-wallet" });
+      return { id: "", status: "redirect", recipientName } as const;
     },
   });
 
@@ -90,9 +75,10 @@ function Home() {
 
   return (
     <main className="min-h-screen bg-background bg-grain pb-20">
-      <Header balance={balance?.available} hasError={!!balance?.error} />
+      <Header />
 
       <div className="mx-auto max-w-2xl px-5 pt-6 space-y-8">
+
         {balance?.error && (
           <div className="rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning-foreground">
             <span className="font-medium">Sandbox notice:</span> {balance.error}
