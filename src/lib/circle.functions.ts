@@ -220,6 +220,7 @@ async function makeEntitySecretCiphertext(): Promise<string> {
 
 /** Create a wallet set (container for dev-controlled wallets). */
 export const createWalletSet = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { name: string }) => {
     if (!d?.name?.trim()) throw new Error("Wallet set name required");
     return d;
