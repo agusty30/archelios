@@ -9,7 +9,7 @@ import {
   listTransfers,
 } from "@/lib/circle.functions";
 
-export const Route = createFileRoute("/sme")({
+export const Route = createFileRoute("/_authenticated/sme")({
   head: () => ({
     meta: [
       { title: "SME Finance & Trade — Swift Send" },

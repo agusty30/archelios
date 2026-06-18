@@ -10,7 +10,7 @@ import {
   getWalletBalances,
 } from "@/lib/circle.functions";
 
-export const Route = createFileRoute("/wallets")({
+export const Route = createFileRoute("/_authenticated/wallets")({
   head: () => ({
     meta: [
       { title: "Dev-Controlled Wallets — Swift Send" },
