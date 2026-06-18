@@ -297,6 +297,7 @@ export const listDevWallets = createServerFn({ method: "POST" })
 
 /** List token balances for a dev-controlled wallet. */
 export const getWalletBalances = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { walletId: string }) => {
     if (!d?.walletId) throw new Error("walletId required");
     return d;
