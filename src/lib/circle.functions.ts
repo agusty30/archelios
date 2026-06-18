@@ -240,6 +240,7 @@ export const createWalletSet = createServerFn({ method: "POST" })
 
 /** Create one or more dev-controlled wallets in a wallet set. */
 export const createDevWallet = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       walletSetId: string;
