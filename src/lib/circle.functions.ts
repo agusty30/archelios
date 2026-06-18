@@ -314,6 +314,7 @@ export const getWalletBalances = createServerFn({ method: "POST" })
  * Automatically resolves the USDC tokenId on the wallet's blockchain.
  */
 export const sendDevWalletTransfer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       walletId: string;
