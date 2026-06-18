@@ -283,6 +283,7 @@ export const listWalletSets = createServerFn({ method: "GET" })
 
 /** List wallets (optionally filtered by walletSetId). */
 export const listDevWallets = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { walletSetId?: string }) => d ?? {})
   .handler(async ({ data }) => {
     const qs = data?.walletSetId ? `?walletSetId=${encodeURIComponent(data.walletSetId)}&pageSize=50` : "?pageSize=50";
