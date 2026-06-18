@@ -90,7 +90,9 @@ async function pickDefaultWallet(): Promise<{ wallet: any; usdc: any | null } | 
 }
 
 /** Treasury USDC balance — uses the dev-controlled wallet (W3S). */
-export const getBalance = createServerFn({ method: "GET" }).handler(async () => {
+export const getBalance = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
   try {
     const picked = await pickDefaultWallet();
     if (!picked) {
