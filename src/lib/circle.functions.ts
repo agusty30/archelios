@@ -113,6 +113,7 @@ export const getBalance = createServerFn({ method: "GET" })
 
 /** Send USDC from the default dev-controlled wallet to a blockchain address. */
 export const sendTransfer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       amountUsd: number;
