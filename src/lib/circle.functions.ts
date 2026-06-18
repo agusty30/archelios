@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { publicEncrypt, constants, randomBytes } from "node:crypto";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 
 
