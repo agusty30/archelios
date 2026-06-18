@@ -79,11 +79,6 @@ function Home() {
 
       <div className="mx-auto max-w-2xl px-5 pt-6 space-y-8">
 
-        {balance?.error && (
-          <div className="rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning-foreground">
-            <span className="font-medium">Sandbox notice:</span> {balance.error}
-          </div>
-        )}
 
         {lastTransfer && <SettlementToast t={lastTransfer} onClose={() => setLastTransfer(null)} />}
 
