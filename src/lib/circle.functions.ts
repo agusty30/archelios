@@ -161,6 +161,7 @@ export const sendTransfer = createServerFn({ method: "POST" })
   });
 
 export const getTransfer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => {
     if (!d?.id) throw new Error("id required");
     return d;
