@@ -9,23 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WalletsRouteImport } from './routes/wallets'
-import { Route as SmeRouteImport } from './routes/sme'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedWalletsRouteImport } from './routes/_authenticated/wallets'
+import { Route as AuthenticatedSmeRouteImport } from './routes/_authenticated/sme'
 import { Route as AuthenticatedMyWalletRouteImport } from './routes/_authenticated/my-wallet'
 
-const WalletsRoute = WalletsRouteImport.update({
-  id: '/wallets',
-  path: '/wallets',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SmeRoute = SmeRouteImport.update({
-  id: '/sme',
-  path: '/sme',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -40,6 +30,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedWalletsRoute = AuthenticatedWalletsRouteImport.update({
+  id: '/wallets',
+  path: '/wallets',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSmeRoute = AuthenticatedSmeRouteImport.update({
+  id: '/sme',
+  path: '/sme',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedMyWalletRoute = AuthenticatedMyWalletRouteImport.update({
   id: '/my-wallet',
   path: '/my-wallet',
@@ -49,65 +49,49 @@ const AuthenticatedMyWalletRoute = AuthenticatedMyWalletRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/sme': typeof SmeRoute
-  '/wallets': typeof WalletsRoute
   '/my-wallet': typeof AuthenticatedMyWalletRoute
+  '/sme': typeof AuthenticatedSmeRoute
+  '/wallets': typeof AuthenticatedWalletsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/sme': typeof SmeRoute
-  '/wallets': typeof WalletsRoute
   '/my-wallet': typeof AuthenticatedMyWalletRoute
+  '/sme': typeof AuthenticatedSmeRoute
+  '/wallets': typeof AuthenticatedWalletsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/sme': typeof SmeRoute
-  '/wallets': typeof WalletsRoute
   '/_authenticated/my-wallet': typeof AuthenticatedMyWalletRoute
+  '/_authenticated/sme': typeof AuthenticatedSmeRoute
+  '/_authenticated/wallets': typeof AuthenticatedWalletsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/sme' | '/wallets' | '/my-wallet'
+  fullPaths: '/' | '/auth' | '/my-wallet' | '/sme' | '/wallets'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/sme' | '/wallets' | '/my-wallet'
+  to: '/' | '/auth' | '/my-wallet' | '/sme' | '/wallets'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/sme'
-    | '/wallets'
     | '/_authenticated/my-wallet'
+    | '/_authenticated/sme'
+    | '/_authenticated/wallets'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  SmeRoute: typeof SmeRoute
-  WalletsRoute: typeof WalletsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/wallets': {
-      id: '/wallets'
-      path: '/wallets'
-      fullPath: '/wallets'
-      preLoaderRoute: typeof WalletsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sme': {
-      id: '/sme'
-      path: '/sme'
-      fullPath: '/sme'
-      preLoaderRoute: typeof SmeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -129,6 +113,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/wallets': {
+      id: '/_authenticated/wallets'
+      path: '/wallets'
+      fullPath: '/wallets'
+      preLoaderRoute: typeof AuthenticatedWalletsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sme': {
+      id: '/_authenticated/sme'
+      path: '/sme'
+      fullPath: '/sme'
+      preLoaderRoute: typeof AuthenticatedSmeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/my-wallet': {
       id: '/_authenticated/my-wallet'
       path: '/my-wallet'
@@ -141,10 +139,14 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedMyWalletRoute: typeof AuthenticatedMyWalletRoute
+  AuthenticatedSmeRoute: typeof AuthenticatedSmeRoute
+  AuthenticatedWalletsRoute: typeof AuthenticatedWalletsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMyWalletRoute: AuthenticatedMyWalletRoute,
+  AuthenticatedSmeRoute: AuthenticatedSmeRoute,
+  AuthenticatedWalletsRoute: AuthenticatedWalletsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -154,19 +156,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  SmeRoute: SmeRoute,
-  WalletsRoute: WalletsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
