@@ -389,11 +389,11 @@ function SmeCallout() {
         <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
           SME finance & trade workflows
         </p>
-        <a href="/my-wallet" className="text-xs font-medium text-primary hover:underline">Open hub →</a>
+        <a href="/sme" className="text-xs font-medium text-primary hover:underline">Open hub →</a>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {items.map((i) => (
-          <a key={i.k} href="/my-wallet" className="rounded-xl bg-card/70 px-3 py-2.5 hover:bg-card transition">
+          <a key={i.k} href="/sme" className="rounded-xl bg-card/70 px-3 py-2.5 hover:bg-card transition">
             <p className="text-sm font-medium">{i.k}</p>
             <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">{i.v}</p>
           </a>
