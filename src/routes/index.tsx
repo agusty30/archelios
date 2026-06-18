@@ -173,7 +173,7 @@ function Home() {
   );
 }
 
-function Header({ balance, hasError }: { balance?: string; hasError: boolean }) {
+function Header() {
   return (
     <header className="sticky top-0 z-30 backdrop-blur-md bg-background/80 border-b border-border">
       <div className="mx-auto max-w-2xl flex items-center justify-between px-5 py-4">
@@ -193,17 +193,12 @@ function Header({ balance, hasError }: { balance?: string; hasError: boolean }) 
           >
             My Wallet
           </a>
-          <div className="text-right">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Treasury</p>
-            <p className="font-mono text-sm tabular-nums">
-              {hasError ? "—" : `$${formatNum(parseFloat(balance ?? "0"))}`}
-            </p>
-          </div>
         </div>
       </div>
     </header>
   );
 }
+
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
