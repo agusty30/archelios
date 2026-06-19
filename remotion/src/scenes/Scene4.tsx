@@ -57,7 +57,7 @@ export const Scene4: React.FC = () => {
       </svg>
 
       <Node x={cx1} label="Sender" sub="DUBAI · UAE" active />
-      <Node x={cx2} label="USDC" sub="POLYGON AMOY" active={arrived1} />
+      <Node x={cx2} label="USDC" sub="ARC TESTNET" active={arrived1} />
       <Node x={cx3} label="Recipient" sub="JAKARTA · ID" active={arrived2} />
 
       <div style={{
