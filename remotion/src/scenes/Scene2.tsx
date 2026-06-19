@@ -40,12 +40,12 @@ export const Scene2: React.FC = () => {
         fontFamily: body, fontSize: 28, color: COLORS.inkSoft, marginTop: 18, maxWidth: 1100,
         opacity: head,
       }}>
-        Every user gets an isolated Circle wallet on Polygon — separate from the treasury, secured by RLS.
+        Every user gets an isolated Circle wallet on Arc — separate from the treasury, secured by RLS.
       </div>
       <div style={{ display: "flex", gap: 28, marginTop: 70 }}>
         <Pill delay={10} sub="AUTH" label="Email + Google" />
         <Pill delay={22} sub="PROVISION" label="Circle Wallet" tone={COLORS.brand} />
-        <Pill delay={34} sub="NETWORK" label="Polygon Amoy" tone={COLORS.accent} />
+        <Pill delay={34} sub="NETWORK" label="Arc Testnet" tone={COLORS.accent} />
       </div>
       <div style={{
         marginTop: 50, fontFamily: mono, fontSize: 18, color: COLORS.inkSoft,
