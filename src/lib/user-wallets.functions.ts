@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const CIRCLE_BASE = "https://api.circle.com";
 const USER_WALLET_SET_NAME = "SwiftSend User Wallets";
-const DEFAULT_BLOCKCHAIN = "MATIC-AMOY";
+const DEFAULT_BLOCKCHAIN = "ARC-TESTNET";
 
 function authHeaders() {
   const rawKey = process.env.CIRCLE_API_KEY?.trim();
