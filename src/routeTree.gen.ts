@@ -15,6 +15,19 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedWalletsRouteImport } from './routes/_authenticated/wallets'
 import { Route as AuthenticatedSmeRouteImport } from './routes/_authenticated/sme'
 import { Route as AuthenticatedMyWalletRouteImport } from './routes/_authenticated/my-wallet'
+import { Route as AuthenticatedAppRouteRouteImport } from './routes/_authenticated/app/route'
+import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app/index'
+import { Route as AuthenticatedAppWalletRouteImport } from './routes/_authenticated/app/wallet'
+import { Route as AuthenticatedAppTransactionsRouteImport } from './routes/_authenticated/app/transactions'
+import { Route as AuthenticatedAppTradeFinanceRouteImport } from './routes/_authenticated/app/trade-finance'
+import { Route as AuthenticatedAppSettlementRouteImport } from './routes/_authenticated/app/settlement'
+import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app/settings'
+import { Route as AuthenticatedAppRemittanceRouteImport } from './routes/_authenticated/app/remittance'
+import { Route as AuthenticatedAppPaymentsRouteImport } from './routes/_authenticated/app/payments'
+import { Route as AuthenticatedAppInvoicesRouteImport } from './routes/_authenticated/app/invoices'
+import { Route as AuthenticatedAppBridgeRouteImport } from './routes/_authenticated/app/bridge'
+import { Route as AuthenticatedAppBeneficiariesRouteImport } from './routes/_authenticated/app/beneficiaries'
+import { Route as AuthenticatedAppAnalyticsRouteImport } from './routes/_authenticated/app/analytics'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -45,13 +58,100 @@ const AuthenticatedMyWalletRoute = AuthenticatedMyWalletRouteImport.update({
   path: '/my-wallet',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAppRouteRoute = AuthenticatedAppRouteRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAppRouteRoute,
+} as any)
+const AuthenticatedAppWalletRoute = AuthenticatedAppWalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
+  getParentRoute: () => AuthenticatedAppRouteRoute,
+} as any)
+const AuthenticatedAppTransactionsRoute =
+  AuthenticatedAppTransactionsRouteImport.update({
+    id: '/transactions',
+    path: '/transactions',
+    getParentRoute: () => AuthenticatedAppRouteRoute,
+  } as any)
+const AuthenticatedAppTradeFinanceRoute =
+  AuthenticatedAppTradeFinanceRouteImport.update({
+    id: '/trade-finance',
+    path: '/trade-finance',
+    getParentRoute: () => AuthenticatedAppRouteRoute,
+  } as any)
+const AuthenticatedAppSettlementRoute =
+  AuthenticatedAppSettlementRouteImport.update({
+    id: '/settlement',
+    path: '/settlement',
+    getParentRoute: () => AuthenticatedAppRouteRoute,
+  } as any)
+const AuthenticatedAppSettingsRoute =
+  AuthenticatedAppSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedAppRouteRoute,
+  } as any)
+const AuthenticatedAppRemittanceRoute =
+  AuthenticatedAppRemittanceRouteImport.update({
+    id: '/remittance',
+    path: '/remittance',
+    getParentRoute: () => AuthenticatedAppRouteRoute,
+  } as any)
+const AuthenticatedAppPaymentsRoute =
+  AuthenticatedAppPaymentsRouteImport.update({
+    id: '/payments',
+    path: '/payments',
+    getParentRoute: () => AuthenticatedAppRouteRoute,
+  } as any)
+const AuthenticatedAppInvoicesRoute =
+  AuthenticatedAppInvoicesRouteImport.update({
+    id: '/invoices',
+    path: '/invoices',
+    getParentRoute: () => AuthenticatedAppRouteRoute,
+  } as any)
+const AuthenticatedAppBridgeRoute = AuthenticatedAppBridgeRouteImport.update({
+  id: '/bridge',
+  path: '/bridge',
+  getParentRoute: () => AuthenticatedAppRouteRoute,
+} as any)
+const AuthenticatedAppBeneficiariesRoute =
+  AuthenticatedAppBeneficiariesRouteImport.update({
+    id: '/beneficiaries',
+    path: '/beneficiaries',
+    getParentRoute: () => AuthenticatedAppRouteRoute,
+  } as any)
+const AuthenticatedAppAnalyticsRoute =
+  AuthenticatedAppAnalyticsRouteImport.update({
+    id: '/analytics',
+    path: '/analytics',
+    getParentRoute: () => AuthenticatedAppRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/app': typeof AuthenticatedAppRouteRouteWithChildren
   '/my-wallet': typeof AuthenticatedMyWalletRoute
   '/sme': typeof AuthenticatedSmeRoute
   '/wallets': typeof AuthenticatedWalletsRoute
+  '/app/analytics': typeof AuthenticatedAppAnalyticsRoute
+  '/app/beneficiaries': typeof AuthenticatedAppBeneficiariesRoute
+  '/app/bridge': typeof AuthenticatedAppBridgeRoute
+  '/app/invoices': typeof AuthenticatedAppInvoicesRoute
+  '/app/payments': typeof AuthenticatedAppPaymentsRoute
+  '/app/remittance': typeof AuthenticatedAppRemittanceRoute
+  '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/settlement': typeof AuthenticatedAppSettlementRoute
+  '/app/trade-finance': typeof AuthenticatedAppTradeFinanceRoute
+  '/app/transactions': typeof AuthenticatedAppTransactionsRoute
+  '/app/wallet': typeof AuthenticatedAppWalletRoute
+  '/app/': typeof AuthenticatedAppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -59,29 +159,102 @@ export interface FileRoutesByTo {
   '/my-wallet': typeof AuthenticatedMyWalletRoute
   '/sme': typeof AuthenticatedSmeRoute
   '/wallets': typeof AuthenticatedWalletsRoute
+  '/app/analytics': typeof AuthenticatedAppAnalyticsRoute
+  '/app/beneficiaries': typeof AuthenticatedAppBeneficiariesRoute
+  '/app/bridge': typeof AuthenticatedAppBridgeRoute
+  '/app/invoices': typeof AuthenticatedAppInvoicesRoute
+  '/app/payments': typeof AuthenticatedAppPaymentsRoute
+  '/app/remittance': typeof AuthenticatedAppRemittanceRoute
+  '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/settlement': typeof AuthenticatedAppSettlementRoute
+  '/app/trade-finance': typeof AuthenticatedAppTradeFinanceRoute
+  '/app/transactions': typeof AuthenticatedAppTransactionsRoute
+  '/app/wallet': typeof AuthenticatedAppWalletRoute
+  '/app': typeof AuthenticatedAppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/app': typeof AuthenticatedAppRouteRouteWithChildren
   '/_authenticated/my-wallet': typeof AuthenticatedMyWalletRoute
   '/_authenticated/sme': typeof AuthenticatedSmeRoute
   '/_authenticated/wallets': typeof AuthenticatedWalletsRoute
+  '/_authenticated/app/analytics': typeof AuthenticatedAppAnalyticsRoute
+  '/_authenticated/app/beneficiaries': typeof AuthenticatedAppBeneficiariesRoute
+  '/_authenticated/app/bridge': typeof AuthenticatedAppBridgeRoute
+  '/_authenticated/app/invoices': typeof AuthenticatedAppInvoicesRoute
+  '/_authenticated/app/payments': typeof AuthenticatedAppPaymentsRoute
+  '/_authenticated/app/remittance': typeof AuthenticatedAppRemittanceRoute
+  '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/_authenticated/app/settlement': typeof AuthenticatedAppSettlementRoute
+  '/_authenticated/app/trade-finance': typeof AuthenticatedAppTradeFinanceRoute
+  '/_authenticated/app/transactions': typeof AuthenticatedAppTransactionsRoute
+  '/_authenticated/app/wallet': typeof AuthenticatedAppWalletRoute
+  '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/my-wallet' | '/sme' | '/wallets'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/app'
+    | '/my-wallet'
+    | '/sme'
+    | '/wallets'
+    | '/app/analytics'
+    | '/app/beneficiaries'
+    | '/app/bridge'
+    | '/app/invoices'
+    | '/app/payments'
+    | '/app/remittance'
+    | '/app/settings'
+    | '/app/settlement'
+    | '/app/trade-finance'
+    | '/app/transactions'
+    | '/app/wallet'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/my-wallet' | '/sme' | '/wallets'
+  to:
+    | '/'
+    | '/auth'
+    | '/my-wallet'
+    | '/sme'
+    | '/wallets'
+    | '/app/analytics'
+    | '/app/beneficiaries'
+    | '/app/bridge'
+    | '/app/invoices'
+    | '/app/payments'
+    | '/app/remittance'
+    | '/app/settings'
+    | '/app/settlement'
+    | '/app/trade-finance'
+    | '/app/transactions'
+    | '/app/wallet'
+    | '/app'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/app'
     | '/_authenticated/my-wallet'
     | '/_authenticated/sme'
     | '/_authenticated/wallets'
+    | '/_authenticated/app/analytics'
+    | '/_authenticated/app/beneficiaries'
+    | '/_authenticated/app/bridge'
+    | '/_authenticated/app/invoices'
+    | '/_authenticated/app/payments'
+    | '/_authenticated/app/remittance'
+    | '/_authenticated/app/settings'
+    | '/_authenticated/app/settlement'
+    | '/_authenticated/app/trade-finance'
+    | '/_authenticated/app/transactions'
+    | '/_authenticated/app/wallet'
+    | '/_authenticated/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -134,16 +307,144 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMyWalletRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/app': {
+      id: '/_authenticated/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AuthenticatedAppRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/app/': {
+      id: '/_authenticated/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/app/wallet': {
+      id: '/_authenticated/app/wallet'
+      path: '/wallet'
+      fullPath: '/app/wallet'
+      preLoaderRoute: typeof AuthenticatedAppWalletRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/app/transactions': {
+      id: '/_authenticated/app/transactions'
+      path: '/transactions'
+      fullPath: '/app/transactions'
+      preLoaderRoute: typeof AuthenticatedAppTransactionsRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/app/trade-finance': {
+      id: '/_authenticated/app/trade-finance'
+      path: '/trade-finance'
+      fullPath: '/app/trade-finance'
+      preLoaderRoute: typeof AuthenticatedAppTradeFinanceRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/app/settlement': {
+      id: '/_authenticated/app/settlement'
+      path: '/settlement'
+      fullPath: '/app/settlement'
+      preLoaderRoute: typeof AuthenticatedAppSettlementRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/app/settings': {
+      id: '/_authenticated/app/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AuthenticatedAppSettingsRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/app/remittance': {
+      id: '/_authenticated/app/remittance'
+      path: '/remittance'
+      fullPath: '/app/remittance'
+      preLoaderRoute: typeof AuthenticatedAppRemittanceRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/app/payments': {
+      id: '/_authenticated/app/payments'
+      path: '/payments'
+      fullPath: '/app/payments'
+      preLoaderRoute: typeof AuthenticatedAppPaymentsRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/app/invoices': {
+      id: '/_authenticated/app/invoices'
+      path: '/invoices'
+      fullPath: '/app/invoices'
+      preLoaderRoute: typeof AuthenticatedAppInvoicesRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/app/bridge': {
+      id: '/_authenticated/app/bridge'
+      path: '/bridge'
+      fullPath: '/app/bridge'
+      preLoaderRoute: typeof AuthenticatedAppBridgeRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/app/beneficiaries': {
+      id: '/_authenticated/app/beneficiaries'
+      path: '/beneficiaries'
+      fullPath: '/app/beneficiaries'
+      preLoaderRoute: typeof AuthenticatedAppBeneficiariesRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/app/analytics': {
+      id: '/_authenticated/app/analytics'
+      path: '/analytics'
+      fullPath: '/app/analytics'
+      preLoaderRoute: typeof AuthenticatedAppAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedAppRouteRoute
+    }
   }
 }
 
+interface AuthenticatedAppRouteRouteChildren {
+  AuthenticatedAppAnalyticsRoute: typeof AuthenticatedAppAnalyticsRoute
+  AuthenticatedAppBeneficiariesRoute: typeof AuthenticatedAppBeneficiariesRoute
+  AuthenticatedAppBridgeRoute: typeof AuthenticatedAppBridgeRoute
+  AuthenticatedAppInvoicesRoute: typeof AuthenticatedAppInvoicesRoute
+  AuthenticatedAppPaymentsRoute: typeof AuthenticatedAppPaymentsRoute
+  AuthenticatedAppRemittanceRoute: typeof AuthenticatedAppRemittanceRoute
+  AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
+  AuthenticatedAppSettlementRoute: typeof AuthenticatedAppSettlementRoute
+  AuthenticatedAppTradeFinanceRoute: typeof AuthenticatedAppTradeFinanceRoute
+  AuthenticatedAppTransactionsRoute: typeof AuthenticatedAppTransactionsRoute
+  AuthenticatedAppWalletRoute: typeof AuthenticatedAppWalletRoute
+  AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+}
+
+const AuthenticatedAppRouteRouteChildren: AuthenticatedAppRouteRouteChildren = {
+  AuthenticatedAppAnalyticsRoute: AuthenticatedAppAnalyticsRoute,
+  AuthenticatedAppBeneficiariesRoute: AuthenticatedAppBeneficiariesRoute,
+  AuthenticatedAppBridgeRoute: AuthenticatedAppBridgeRoute,
+  AuthenticatedAppInvoicesRoute: AuthenticatedAppInvoicesRoute,
+  AuthenticatedAppPaymentsRoute: AuthenticatedAppPaymentsRoute,
+  AuthenticatedAppRemittanceRoute: AuthenticatedAppRemittanceRoute,
+  AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
+  AuthenticatedAppSettlementRoute: AuthenticatedAppSettlementRoute,
+  AuthenticatedAppTradeFinanceRoute: AuthenticatedAppTradeFinanceRoute,
+  AuthenticatedAppTransactionsRoute: AuthenticatedAppTransactionsRoute,
+  AuthenticatedAppWalletRoute: AuthenticatedAppWalletRoute,
+  AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+}
+
+const AuthenticatedAppRouteRouteWithChildren =
+  AuthenticatedAppRouteRoute._addFileChildren(
+    AuthenticatedAppRouteRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAppRouteRoute: typeof AuthenticatedAppRouteRouteWithChildren
   AuthenticatedMyWalletRoute: typeof AuthenticatedMyWalletRoute
   AuthenticatedSmeRoute: typeof AuthenticatedSmeRoute
   AuthenticatedWalletsRoute: typeof AuthenticatedWalletsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAppRouteRoute: AuthenticatedAppRouteRouteWithChildren,
   AuthenticatedMyWalletRoute: AuthenticatedMyWalletRoute,
   AuthenticatedSmeRoute: AuthenticatedSmeRoute,
   AuthenticatedWalletsRoute: AuthenticatedWalletsRoute,
@@ -160,13 +461,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

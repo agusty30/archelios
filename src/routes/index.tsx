@@ -1,408 +1,399 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
-import {
-  getCorridors,
-  getQuote,
-  listTransfers,
-  type CorridorCode,
-} from "@/lib/circle.functions";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Swift Send — Transparent USDC Remittance" },
+      { title: "Archelios — Cross-border payments on Circle USDC" },
       {
         name: "description",
         content:
-          "Send money globally in seconds. Transparent 0.5% fee, real-time USDC settlement on Circle. No hidden FX spread.",
+          "Fast. Transparent. Borderless. Send USDC globally with real-time settlement on ARC. Built for remittance, SME finance, and trade.",
       },
-      { property: "og:title", content: "Swift Send — Transparent USDC Remittance" },
+      { property: "og:title", content: "Archelios — Cross-border payments on Circle USDC" },
       {
         property: "og:description",
-        content: "Send money globally in seconds with real-time USDC settlement.",
+        content: "Send USDC globally with real-time settlement on ARC.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: "/icon-512.png" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:image", content: "/icon-512.png" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  loader: async ({ context }) => {
-    await Promise.all([
-      context.queryClient.prefetchQuery({ queryKey: ["corridors"], queryFn: () => getCorridors() }),
-      context.queryClient.prefetchQuery({ queryKey: ["transfers"], queryFn: () => listTransfers() }),
-    ]);
-    return null;
-  },
-  component: Home,
+  component: Landing,
 });
 
-function Home() {
-  const router = useRouter();
-  const { data: corridors = [] } = useQuery({ queryKey: ["corridors"], queryFn: () => getCorridors() });
-  const { data: transfers = [] } = useQuery({
-    queryKey: ["transfers"],
-    queryFn: () => listTransfers(),
-    refetchInterval: 5000,
-  });
-
-  const [corridor, setCorridor] = useState<CorridorCode>("PHP");
-  const [amount, setAmount] = useState<string>("250");
-  const [recipientName, setRecipientName] = useState("");
-  const [recipientAddress, setRecipientAddress] = useState("");
-  const [chain, setChain] = useState<"MATIC" | "ETH" | "ARB" | "BASE">("MATIC");
-  const [confirm, setConfirm] = useState(false);
-  const [lastTransfer, setLastTransfer] = useState<{ id: string; status: string; recipientName: string } | null>(null);
-
-  const amountNum = useMemo(() => Math.max(0, parseFloat(amount || "0") || 0), [amount]);
-
-  const quoteQuery = useQuery({
-    queryKey: ["quote", corridor, amountNum],
-    queryFn: () => getQuote({ data: { amountUsd: amountNum, corridor } }),
-    enabled: amountNum > 0,
-  });
-
-  const sendMut = useMutation({
-    mutationFn: async () => {
-      // Public users must sign in and use their own wallet — never the treasury.
-      router.navigate({ to: "/my-wallet" });
-      return { id: "", status: "redirect", recipientName } as const;
-    },
-  });
-
-  const selectedCorridor = corridors.find((c) => c.code === corridor);
-
+function Landing() {
   return (
-    <main className="min-h-screen bg-background bg-grain pb-20">
-      <Header />
-
-      <div className="mx-auto max-w-2xl px-5 pt-6 space-y-8">
-
-
-        {lastTransfer && <SettlementToast t={lastTransfer} onClose={() => setLastTransfer(null)} />}
-
-        <section className="rounded-3xl bg-card shadow-[var(--shadow-lift)] p-6 sm:p-8 space-y-6">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">You send</p>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl text-muted-foreground">$</span>
-              <input
-                inputMode="decimal"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
-                className="w-full bg-transparent text-5xl sm:text-6xl font-display font-medium tracking-tight outline-none placeholder:text-muted-foreground/40"
-                placeholder="0"
-              />
-              <span className="text-base font-medium text-muted-foreground">USDC</span>
-            </div>
-          </div>
-
-          <div className="h-px bg-border" />
-
-          <div>
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Recipient gets</p>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl text-muted-foreground">{selectedCorridor?.symbol}</span>
-              <span className="text-5xl sm:text-6xl font-display font-medium tracking-tight">
-                {quoteQuery.data ? formatNum(quoteQuery.data.receiveAmount) : "—"}
-              </span>
-              <select
-                value={corridor}
-                onChange={(e) => setCorridor(e.target.value as CorridorCode)}
-                className="ml-auto rounded-full border border-border bg-secondary px-3 py-1.5 text-sm font-medium outline-none focus:ring-2 focus:ring-ring"
-              >
-                {corridors.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.flag} {c.code}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {quoteQuery.data && (
-            <div className="rounded-2xl bg-secondary/60 p-4 space-y-2 text-sm">
-              <Row label="Network fee (0.5%, no spread)" value={`$${quoteQuery.data.fee.toFixed(2)}`} />
-              <Row
-                label="Exchange rate"
-                value={`1 USDC = ${quoteQuery.data.rate} ${corridor}`}
-              />
-              <Row
-                label="Estimated settlement"
-                value={
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="size-1.5 rounded-full bg-success pulse-dot" />
-                    ~{quoteQuery.data.etaSeconds}s on-chain
-                  </span>
-                }
-              />
-            </div>
-          )}
-
-          <button
-            onClick={() => setConfirm(true)}
-            disabled={!quoteQuery.data || amountNum <= 0}
-            className="w-full rounded-2xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground transition active:scale-[0.98] disabled:opacity-40"
-          >
-            Continue
-          </button>
-        </section>
-
-        <RecentTransfers transfers={transfers} />
-
-        <SmeCallout />
-      </div>
-
-      {confirm && quoteQuery.data && (
-        <ConfirmSheet
-          onClose={() => setConfirm(false)}
-          onSubmit={() => sendMut.mutate()}
-          submitting={sendMut.isPending}
-          error={sendMut.error?.message}
-          quote={quoteQuery.data}
-          recipientName={recipientName}
-          setRecipientName={setRecipientName}
-          recipientAddress={recipientAddress}
-          setRecipientAddress={setRecipientAddress}
-          chain={chain}
-          setChain={setChain}
-        />
-      )}
-    </main>
+    <div className="min-h-screen bg-background text-foreground">
+      <TopNav />
+      <Hero />
+      <TrustBar />
+      <Why />
+      <HowItWorks />
+      <SupportedChains />
+      <CircleInfra />
+      <BusinessSolutions />
+      <Faq />
+      <FinalCta />
+      <Footer />
+    </div>
   );
 }
 
-function Header() {
+function TopNav() {
   return (
-    <header className="sticky top-0 z-30 backdrop-blur-md bg-background/80 border-b border-border">
-      <div className="mx-auto max-w-2xl flex items-center justify-between px-5 py-4">
-        <div className="flex items-center gap-2.5">
-          <div className="size-9 rounded-xl bg-primary text-primary-foreground grid place-items-center font-display text-lg">
-            ↻
-          </div>
-          <div>
-            <h1 className="text-base font-display font-semibold leading-none">Swift Send</h1>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Powered by Circle · USDC</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <a
-            href="/my-wallet"
-            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+    <header className="sticky top-0 z-40 backdrop-blur-md bg-background/70 border-b border-border">
+      <div className="mx-auto max-w-6xl flex items-center justify-between px-6 py-3.5">
+        <Link to="/" className="flex items-center gap-2.5">
+          <Logo />
+          <span className="font-display text-lg leading-none">Archelios</span>
+        </Link>
+        <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
+          <a href="#why" className="hover:text-foreground">Why Archelios</a>
+          <a href="#how" className="hover:text-foreground">How it works</a>
+          <a href="#solutions" className="hover:text-foreground">Solutions</a>
+          <a href="#faq" className="hover:text-foreground">FAQ</a>
+        </nav>
+        <div className="flex items-center gap-2">
+          <Link to="/auth" className="hidden sm:inline-flex text-sm text-muted-foreground hover:text-foreground px-3 py-1.5">
+            Sign in
+          </Link>
+          <Link
+            to="/app"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary text-primary-foreground text-sm font-medium px-4 py-2 hover:opacity-90"
           >
-            My Wallet
-          </a>
+            Open app
+            <span aria-hidden>→</span>
+          </Link>
         </div>
       </div>
     </header>
   );
 }
 
-
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Hero() {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium font-mono tabular-nums">{value}</span>
-    </div>
-  );
-}
-
-function ConfirmSheet({
-  onClose,
-  onSubmit,
-  submitting,
-  error,
-  quote,
-  recipientName,
-  setRecipientName,
-  recipientAddress,
-  setRecipientAddress,
-  chain,
-  setChain,
-}: any) {
-  const canSubmit = recipientName.trim() && recipientAddress.trim().startsWith("0x");
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-foreground/30 backdrop-blur-sm">
-      <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-card p-6 shadow-[var(--shadow-lift)] space-y-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-display font-semibold">Confirm payout</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none">×</button>
+    <section className="relative overflow-hidden">
+      <div className="absolute inset-0 bg-dot opacity-60 [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]" />
+      <div className="relative mx-auto max-w-6xl px-6 pt-20 pb-24 sm:pt-28 sm:pb-32">
+        <div className="max-w-3xl">
+          <p className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
+            <span className="size-1.5 rounded-full bg-accent pulse-dot" />
+            Live on Arc Testnet · Circle-powered
+          </p>
+          <h1 className="mt-6 font-display text-5xl sm:text-6xl lg:text-7xl leading-[1.02] tracking-tight">
+            Cross-border payments,{" "}
+            <span className="italic text-muted-foreground">powered by</span> Circle USDC.
+          </h1>
+          <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl leading-relaxed">
+            Fast. Transparent. Borderless. Settle in seconds on ARC — for remittance, SME finance, and trade.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Link
+              to="/auth"
+              className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-6 py-3 text-sm font-medium hover:opacity-90"
+            >
+              Start sending
+              <span aria-hidden>→</span>
+            </Link>
+            <Link
+              to="/app/wallet"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-6 py-3 text-sm font-medium hover:border-foreground/30"
+            >
+              Create wallet
+            </Link>
+            <a
+              href="#how"
+              className="inline-flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground hover:text-foreground"
+            >
+              View demo
+            </a>
+          </div>
         </div>
 
-        <div className="rounded-2xl bg-secondary/60 p-4 text-sm space-y-2">
-          <Row label="Sending" value={`$${quote.amountUsd.toFixed(2)} USDC`} />
-          <Row
-            label="Recipient gets"
-            value={`${quote.corridor.symbol}${formatNum(quote.receiveAmount)} ${quote.corridor.code}`}
-          />
-          <Row label="Fee" value={`$${quote.fee.toFixed(2)}`} />
+        <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl">
+          <Stat kpi="~25s" label="Settlement time" />
+          <Stat kpi="0.5%" label="Flat platform fee" />
+          <Stat kpi="0" label="FX spread" />
+          <Stat kpi="24/7" label="Global rails" />
         </div>
-
-        <div className="space-y-3">
-          <Field label="Recipient name">
-            <input
-              value={recipientName}
-              onChange={(e) => setRecipientName(e.target.value)}
-              placeholder="Maria Santos"
-              className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
-            />
-          </Field>
-          <Field label="Recipient USDC address">
-            <input
-              value={recipientAddress}
-              onChange={(e) => setRecipientAddress(e.target.value)}
-              placeholder="0x…"
-              spellCheck={false}
-              className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm font-mono outline-none focus:ring-2 focus:ring-ring"
-            />
-          </Field>
-          <Field label="Settlement chain (CCTP-routable)">
-            <div className="grid grid-cols-4 gap-2">
-              {(["MATIC", "ETH", "ARB", "BASE"] as const).map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setChain(c)}
-                  className={`rounded-xl border px-2 py-2 text-xs font-medium transition ${
-                    chain === c
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-secondary"
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </Field>
-        </div>
-
-        {error && (
-          <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {error}
-          </div>
-        )}
-
-        <button
-          disabled={!canSubmit || submitting}
-          onClick={onSubmit}
-          className="w-full rounded-2xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground transition active:scale-[0.98] disabled:opacity-40"
-        >
-          {submitting ? "Submitting to Circle…" : `Send $${quote.amountUsd.toFixed(2)} now`}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block space-y-1.5">
-      <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function SettlementToast({
-  t,
-  onClose,
-}: {
-  t: { id: string; status: string; recipientName: string };
-  onClose: () => void;
-}) {
-  return (
-    <div className="rounded-2xl border border-success/40 bg-success/10 p-4 flex items-start gap-3">
-      <div className="size-9 shrink-0 rounded-full bg-success text-success-foreground grid place-items-center font-bold">
-        ✓
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm">Transfer submitted to Circle</p>
-        <p className="text-xs text-muted-foreground mt-0.5 truncate">
-          To {t.recipientName} · Status:{" "}
-          <span className="font-mono">{t.status}</span> · ID:{" "}
-          <span className="font-mono">{t.id.slice(0, 8)}…</span>
-        </p>
-      </div>
-      <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg leading-none">×</button>
-    </div>
-  );
-}
-
-function RecentTransfers({ transfers }: { transfers: any[] }) {
-  return (
-    <section>
-      <h2 className="text-sm font-medium uppercase tracking-widest text-muted-foreground mb-3 px-1">
-        Recent settlements
-      </h2>
-      <div className="rounded-3xl bg-card shadow-[var(--shadow-soft)] divide-y divide-border overflow-hidden">
-        {transfers.length === 0 && (
-          <div className="px-5 py-8 text-center text-sm text-muted-foreground">
-            No transfers yet — your sandbox payouts will appear here in real time.
-          </div>
-        )}
-        {transfers.slice(0, 6).map((t) => (
-          <div key={t.id} className="flex items-center gap-3 px-5 py-3.5">
-            <StatusDot status={t.status} />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium font-mono truncate">{t.id.slice(0, 12)}…</p>
-              <p className="text-xs text-muted-foreground">
-                {t.destination?.chain ?? "—"} ·{" "}
-                {t.createDate ? new Date(t.createDate).toLocaleString() : ""}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-medium font-mono tabular-nums">
-                ${t.amount?.amount ?? "—"}
-              </p>
-              <p className="text-[11px] text-muted-foreground capitalize">{t.status}</p>
-            </div>
-          </div>
-        ))}
       </div>
     </section>
   );
 }
 
-function StatusDot({ status }: { status: string }) {
-  const s = (status || "").toLowerCase();
-  const cls =
-    s === "complete"
-      ? "bg-success"
-      : s === "failed"
-      ? "bg-destructive"
-      : "bg-warning pulse-dot";
-  return <span className={`size-2 rounded-full ${cls}`} />;
+function Stat({ kpi, label }: { kpi: string; label: string }) {
+  return (
+    <div>
+      <p className="font-display text-3xl tracking-tight">{kpi}</p>
+      <p className="text-xs uppercase tracking-widest text-muted-foreground mt-1">{label}</p>
+    </div>
+  );
 }
 
-function SmeCallout() {
-  const items = [
-    { k: "Invoice factoring", v: "Advance USDC against receivables, automated waterfall on repayment." },
-    { k: "Trade escrow", v: "Milestone-based USDC release for import/export settlement." },
-    { k: "PO financing", v: "Fund purchase orders, unlock on proof-of-delivery." },
-    { k: "Credit passport", v: "On-chain transaction & repayment history for SMEs." },
+function TrustBar() {
+  const items = ["Circle USDC", "CCTP v2", "Circle Wallets", "Circle Gateway", "Arc Testnet"];
+  return (
+    <section className="border-y border-border bg-card/40">
+      <div className="mx-auto max-w-6xl px-6 py-5 flex flex-wrap items-center gap-x-10 gap-y-3 text-xs uppercase tracking-widest text-muted-foreground">
+        <span className="text-foreground/70">Built with</span>
+        {items.map((i) => <span key={i}>{i}</span>)}
+      </div>
+    </section>
+  );
+}
+
+function Why() {
+  const cards = [
+    { k: "Transparent fees", v: "Flat 0.5% platform fee. No hidden FX spread. See every basis point before you send." },
+    { k: "Real-time settlement", v: "Watch the transfer land on-chain in seconds — Initiated → Processing → Settled." },
+    { k: "Embedded wallets", v: "Every user gets a Circle programmable wallet auto-provisioned on sign-up. No seed phrase." },
+    { k: "Programmable rails", v: "USDC + CCTP v2 for atomic cross-chain settlement across supported networks." },
+    { k: "SME-ready", v: "Bulk payouts, supplier payments, invoice factoring, escrow — all on the same rail." },
+    { k: "Compliance-native", v: "Circle's regulated USDC issuer + on-chain audit trail for every transaction." },
   ];
   return (
-    <section className="rounded-3xl border border-border bg-accent/40 p-5">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          SME finance & trade workflows
-        </p>
-        <a href="/sme" className="text-xs font-medium text-primary hover:underline">Open hub →</a>
+    <section id="why" className="mx-auto max-w-6xl px-6 py-24">
+      <div className="max-w-2xl">
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">Why Archelios</p>
+        <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
+          A payments stack that respects your money.
+        </h2>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        {items.map((i) => (
-          <a key={i.k} href="/sme" className="rounded-xl bg-card/70 px-3 py-2.5 hover:bg-card transition">
-            <p className="text-sm font-medium">{i.k}</p>
-            <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">{i.v}</p>
-          </a>
+      <div className="mt-12 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {cards.map((c) => (
+          <div key={c.k} className="rounded-2xl border border-border bg-card p-6 card-hover">
+            <div className="size-8 rounded-lg bg-accent/20 text-accent-foreground grid place-items-center mb-4">
+              <span className="size-1.5 rounded-full bg-accent" />
+            </div>
+            <h3 className="text-lg font-medium tracking-tight">{c.k}</h3>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{c.v}</p>
+          </div>
         ))}
       </div>
     </section>
   );
 }
 
-function formatNum(n: number) {
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function HowItWorks() {
+  const steps = [
+    { n: "01", t: "Fund your wallet", d: "Auto-provisioned on sign-up. Top up USDC from any supported chain or the Circle faucet." },
+    { n: "02", t: "Pick a corridor", d: "Choose recipient country. Preview fees + FX before confirming — no surprises." },
+    { n: "03", t: "Send & track", d: "USDC leaves your wallet, hits Circle rails, and lands in the recipient wallet within ~25 seconds." },
+    { n: "04", t: "Settle & receive", d: "Real-time status: Initiated → Processing → On-chain → Settled. With tx hash + explorer link." },
+  ];
+  return (
+    <section id="how" className="border-t border-border bg-card/40">
+      <div className="mx-auto max-w-6xl px-6 py-24">
+        <div className="max-w-2xl">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">How it works</p>
+          <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
+            Four steps. Seconds to settle.
+          </h2>
+        </div>
+        <div className="mt-12 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {steps.map((s) => (
+            <div key={s.n} className="relative">
+              <p className="font-mono text-xs text-muted-foreground">{s.n}</p>
+              <h3 className="mt-2 font-medium text-lg">{s.t}</h3>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{s.d}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SupportedChains() {
+  const chains = [
+    { name: "Arc Testnet", status: "Primary", note: "Native settlement layer" },
+    { name: "Ethereum", status: "via CCTP v2", note: "Cross-chain USDC bridge" },
+    { name: "Solana", status: "via CCTP v2", note: "Cross-chain USDC bridge" },
+    { name: "Pharos", status: "Preview", note: "Coming soon" },
+  ];
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-24">
+      <div className="max-w-2xl">
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">Supported chains</p>
+        <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
+          Native on Arc. Bridged everywhere.
+        </h2>
+      </div>
+      <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {chains.map((c) => (
+          <div key={c.name} className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">{c.name}</span>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border rounded-full px-2 py-0.5">
+                {c.status}
+              </span>
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground">{c.note}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CircleInfra() {
+  const parts = [
+    { k: "Circle USDC", v: "Fully-reserved digital dollar issued by Circle." },
+    { k: "Circle Wallets", v: "Programmable, dev-controlled wallets — one per user, no seed phrase." },
+    { k: "CCTP v2", v: "Native cross-chain USDC transfer without wrapped assets." },
+    { k: "Circle Gateway", v: "Unified USDC balance across supported chains." },
+  ];
+  return (
+    <section className="border-t border-border">
+      <div className="mx-auto max-w-6xl px-6 py-24 grid lg:grid-cols-2 gap-12">
+        <div>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Circle infrastructure</p>
+          <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
+            Built on rails you can trust.
+          </h2>
+          <p className="mt-6 text-muted-foreground max-w-md leading-relaxed">
+            Archelios uses Circle's production-grade USDC stack end-to-end — regulated issuance,
+            audited smart accounts, and native cross-chain settlement.
+          </p>
+        </div>
+        <div className="space-y-3">
+          {parts.map((p) => (
+            <div key={p.k} className="rounded-xl border border-border bg-card p-5 flex items-start gap-4">
+              <div className="size-9 shrink-0 rounded-lg bg-accent/20 grid place-items-center">
+                <span className="size-2 rounded-full bg-accent" />
+              </div>
+              <div>
+                <p className="font-medium">{p.k}</p>
+                <p className="text-sm text-muted-foreground mt-1">{p.v}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function BusinessSolutions() {
+  const items = [
+    { t: "Remittance", d: "Send USDC to 190+ countries in seconds. Transparent fees, real-time settlement, receipt on every transaction." },
+    { t: "SME Finance", d: "Business wallet, supplier payments, payroll, bulk transfers, and approval workflows." },
+    { t: "Trade Finance", d: "Milestone escrow, invoice factoring, purchase-order financing, on-chain credit passport." },
+    { t: "Developer API", d: "REST + webhooks. Programmable USDC rails without touching custody or private keys." },
+  ];
+  return (
+    <section id="solutions" className="border-t border-border bg-card/40">
+      <div className="mx-auto max-w-6xl px-6 py-24">
+        <div className="max-w-2xl">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Business solutions</p>
+          <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight">
+            One platform. Every payment workflow.
+          </h2>
+        </div>
+        <div className="mt-12 grid md:grid-cols-2 gap-4">
+          {items.map((i) => (
+            <Link
+              key={i.t}
+              to="/app"
+              className="rounded-2xl border border-border bg-card p-8 card-hover group"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-2xl tracking-tight">{i.t}</h3>
+                <span className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition">→</span>
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{i.d}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Faq() {
+  const qs = [
+    { q: "Is Archelios live on mainnet?", a: "The current build runs on Arc Testnet with real Circle sandbox USDC. Mainnet is roadmap-gated on Circle Arc GA." },
+    { q: "Do I need a crypto wallet?", a: "No. Every account gets a Circle-managed programmable wallet auto-provisioned on sign-up. No seed phrase, no browser extension." },
+    { q: "What are the fees?", a: "A flat 0.5% platform fee plus network gas. Zero FX spread — you get the mid-market rate." },
+    { q: "Which chains do you support?", a: "Arc Testnet natively. Ethereum and Solana via Circle CCTP v2. Pharos is on the roadmap." },
+    { q: "Can businesses integrate via API?", a: "Yes — the same programmable USDC rails power our own product. Developer keys can be issued from Settings." },
+  ];
+  return (
+    <section id="faq" className="mx-auto max-w-3xl px-6 py-24">
+      <p className="text-xs uppercase tracking-widest text-muted-foreground text-center">FAQ</p>
+      <h2 className="mt-3 font-display text-4xl sm:text-5xl tracking-tight text-center">
+        Frequently asked.
+      </h2>
+      <div className="mt-12 divide-y divide-border border-y border-border">
+        {qs.map((q) => (
+          <details key={q.q} className="group py-5">
+            <summary className="flex items-center justify-between cursor-pointer list-none">
+              <span className="font-medium">{q.q}</span>
+              <span className="text-muted-foreground group-open:rotate-45 transition">+</span>
+            </summary>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{q.a}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function FinalCta() {
+  return (
+    <section className="border-t border-border">
+      <div className="mx-auto max-w-6xl px-6 py-24 text-center">
+        <h2 className="font-display text-5xl sm:text-6xl tracking-tight">
+          Move money like it's <span className="italic text-muted-foreground">2026</span>.
+        </h2>
+        <p className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto">
+          Open your wallet in under a minute. Send your first USDC settlement today.
+        </p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link
+            to="/auth"
+            className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-6 py-3 text-sm font-medium hover:opacity-90"
+          >
+            Get started free
+          </Link>
+          <Link
+            to="/app"
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-6 py-3 text-sm font-medium hover:border-foreground/30"
+          >
+            Open dashboard
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="border-t border-border bg-card/40">
+      <div className="mx-auto max-w-6xl px-6 py-10 flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <Logo small />
+          <span>© {new Date().getFullYear()} Archelios · Built for the Arc Hackathon</span>
+        </div>
+        <div className="flex items-center gap-6">
+          <a href="#why" className="hover:text-foreground">Why</a>
+          <a href="#how" className="hover:text-foreground">How</a>
+          <a href="#solutions" className="hover:text-foreground">Solutions</a>
+          <a href="#faq" className="hover:text-foreground">FAQ</a>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+export function Logo({ small = false }: { small?: boolean }) {
+  const size = small ? "size-6" : "size-8";
+  return (
+    <div className={`${size} rounded-lg bg-primary text-primary-foreground grid place-items-center font-display shrink-0`}>
+      <svg viewBox="0 0 24 24" className={small ? "size-3.5" : "size-4"} fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M4 18L12 4l8 14M8 14h8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
+  );
 }
