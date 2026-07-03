@@ -14,6 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      beneficiaries: {
+        Row: {
+          address: string
+          chain: string
+          country: string | null
+          created_at: string
+          currency: string | null
+          id: string
+          name: string
+          note: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          chain?: string
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          name: string
+          note?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          chain?: string
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          name?: string
+          note?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      remittances: {
+        Row: {
+          amount_usd: number
+          circle_tx_id: string | null
+          corridor: string | null
+          created_at: string
+          destination_chain: string
+          fee_usd: number
+          fx_rate: number | null
+          id: string
+          receive_amount: number | null
+          recipient_address: string
+          recipient_name: string | null
+          reference: string | null
+          source_chain: string
+          status: string
+          tx_hash: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_usd: number
+          circle_tx_id?: string | null
+          corridor?: string | null
+          created_at?: string
+          destination_chain?: string
+          fee_usd?: number
+          fx_rate?: number | null
+          id?: string
+          receive_amount?: number | null
+          recipient_address: string
+          recipient_name?: string | null
+          reference?: string | null
+          source_chain?: string
+          status?: string
+          tx_hash?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_usd?: number
+          circle_tx_id?: string | null
+          corridor?: string | null
+          created_at?: string
+          destination_chain?: string
+          fee_usd?: number
+          fx_rate?: number | null
+          id?: string
+          receive_amount?: number | null
+          recipient_address?: string
+          recipient_name?: string | null
+          reference?: string | null
+          source_chain?: string
+          status?: string
+          tx_hash?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_wallets: {
         Row: {
           address: string

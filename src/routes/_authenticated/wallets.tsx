@@ -26,15 +26,7 @@ export const Route = createFileRoute("/_authenticated/wallets")({
   notFoundComponent: () => <div className="p-6">Not found</div>,
 });
 
-const CHAINS = [
-  "ARC-TESTNET",
-  "MATIC-AMOY",
-  "ETH-SEPOLIA",
-  "ARB-SEPOLIA",
-  "BASE-SEPOLIA",
-  "AVAX-FUJI",
-  "SOL-DEVNET",
-];
+const CHAINS = ["ARC-TESTNET"];
 
 
 function WalletsPage() {

@@ -120,7 +120,7 @@ export const sendTransfer = createServerFn({ method: "POST" })
       corridor: CorridorCode;
       recipientName: string;
       recipientAddress: string;
-      chain?: "MATIC" | "ETH" | "ARB" | "BASE";
+      chain?: "ARC-TESTNET";
     }) => {
       if (!d.amountUsd || d.amountUsd <= 0) throw new Error("Invalid amount");
       if (!d.recipientName?.trim()) throw new Error("Recipient name required");
@@ -258,7 +258,7 @@ export const createDevWallet = createServerFn({ method: "POST" })
       idempotencyKey: crypto.randomUUID(),
       entitySecretCiphertext,
       walletSetId: data.walletSetId,
-      blockchains: data.blockchains ?? ["MATIC-AMOY"],
+      blockchains: data.blockchains ?? ["ARC-TESTNET"],
       count: data.count ?? 1,
       accountType: data.accountType ?? "SCA",
     };
