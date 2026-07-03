@@ -73,7 +73,7 @@ function BeneficiariesPage() {
   );
 }
 
-function Input({ label, value, onChange, placeholder, mono }: any) {
+function Input({ label, value, onChange, placeholder, mono }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; mono?: boolean }) {
   return (
     <label className="block space-y-1.5">
       <span className="text-[11px] uppercase tracking-widest text-muted-foreground">{label}</span>

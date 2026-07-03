@@ -102,8 +102,8 @@ function Kpi({ label, value, sub, tone, accent }: { label: string; value: any; s
   );
 }
 
-export function Card({ children, className = "" }: { children: any; className?: string }) {
-  return <div className={`rounded-2xl border border-border bg-card p-6 ${className}`}>{children}</div>;
+export function Card({ children, className = "", id }: { children: any; className?: string; id?: string }) {
+  return <div id={id} className={`rounded-2xl border border-border bg-card p-6 ${className}`}>{children}</div>;
 }
 export function CardHead({ title, action }: { title: string; action?: any }) {
   return (
