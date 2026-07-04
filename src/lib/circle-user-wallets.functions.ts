@@ -93,7 +93,7 @@ export const ensureCircleUser = createServerFn({ method: "POST" })
     // placeholder row only if none exists for wallet_type = 'USER'.
     const { data: existing } = await supabase
       .from("user_wallets")
-      .select("id, circle_user_id, address, circle_wallet_id")
+      .select("circle_user_id, address, circle_wallet_id")
       .eq("user_id", userId)
       .eq("wallet_type", "USER")
       .maybeSingle();
@@ -108,7 +108,11 @@ export const ensureCircleUser = createServerFn({ method: "POST" })
         wallet_type: "USER",
       });
     } else if (!existing.circle_user_id) {
-      await supabase.from("user_wallets").update({ circle_user_id: userId }).eq("id", existing.id);
+      await supabase
+        .from("user_wallets")
+        .update({ circle_user_id: userId })
+        .eq("user_id", userId)
+        .eq("wallet_type", "USER");
     }
 
     return { circleUserId: userId };
