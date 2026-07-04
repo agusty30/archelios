@@ -3,16 +3,12 @@ import { publicEncrypt, constants } from "node:crypto";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
- * Circle User-Controlled Wallets
- * -------------------------------
- * Each end-user gets their own Circle wallet, secured by their PIN /
- * social login. The developer (this backend) can NEVER sign a transfer
- * — only the user's browser can, using the userToken + PIN via the
- * Circle Web SDK.
+ * Circle User-Controlled Wallets — Email OTP / Social Login / PIN
  *
- * Reference:
- *   https://developers.circle.com/w3s/user-controlled-quickstart
- *   https://developers.circle.com/wallets/user-controlled/authentication-methods
+ * Each end-user gets their own Circle wallet. Authentication is handled
+ * by the Circle Web SDK (email OTP, social login, or PIN).
+ * The developer backend can NEVER sign a transfer — only the user's
+ * browser can, via the Circle Web SDK.
  */
 
 const CIRCLE_BASE = "https://api.circle.com";
@@ -75,17 +71,17 @@ export const ensureCircleUser = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
 
-    // Lazy-create the Circle user (idempotent — Circle returns userAlreadyExisted the 2nd time)
     try {
       await circleFetch("/v1/w3s/users", {
         method: "POST",
         body: JSON.stringify({ userId }),
       });
     } catch (err: any) {
-      // 155101 = userAlreadyExisted — fine
-      if (!/userAlreadyExisted|155101|already exists/i.test(err?.message ?? "")) {
-        throw err;
-      }
+      const msg = err?.message ?? "";
+      const isAlreadyExists =
+        /already\s*(exists|created)|userAlreadyExisted|155101/i.test(msg) ||
+        msg.includes("409");
+      if (!isAlreadyExists) throw err;
     }
 
     // Store the circle_user_id on the user_wallets mapping row so we can
@@ -148,13 +144,11 @@ export const getCircleUserStatus = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const json = await circleFetch("/v1/w3s/user", { method: "GET" }, data.userToken);
-    return {
-      status: (json?.data?.status ?? "UNKNOWN") as string, // ENABLED / DISABLED
-      pinStatus: (json?.data?.pinStatus ?? "UNSET") as string, // ENABLED / UNSET / LOCKED
-      pinDetails: json?.data?.pinDetails ?? null,
-      securityQuestionStatus: (json?.data?.securityQuestionStatus ?? "UNSET") as string,
-      hasWallet: !!(json?.data?.pinStatus === "ENABLED"),
-    };
+    const status = (json?.data?.status ?? "UNKNOWN") as string;
+    const pinStatus = (json?.data?.pinStatus ?? "UNSET") as string;
+    const securityQuestionStatus = (json?.data?.securityQuestionStatus ?? "UNSET") as string;
+    const hasWallet = status === "ENABLED" || pinStatus === "ENABLED";
+    return { status, pinStatus, securityQuestionStatus, hasWallet };
   });
 
 /**

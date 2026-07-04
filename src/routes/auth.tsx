@@ -15,7 +15,7 @@ export const Route = createFileRoute("/auth")({
     if (data.user) throw redirect({ to: "/my-wallet" });
   },
   component: AuthPage,
-  head: () => ({ meta: [{ title: "Sign in · Swift Send" }] }),
+  head: () => ({ meta: [{ title: "Sign in · Archelios" }] }),
 });
 
 function AuthPage() {
@@ -37,14 +37,18 @@ function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin + "/my-wallet" },
         });
         if (error) throw error;
-        toast.success("Account created. You can sign in now.");
-        setMode("signin");
+        if (signUpData.session) {
+          toast.success("Account created — signing you in…");
+        } else {
+          const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+          if (signInError) throw signInError;
+          toast.success("Account created — signed in.");
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;

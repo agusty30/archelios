@@ -20,10 +20,8 @@ export const Route = createFileRoute("/_authenticated/app/wallet")({
   component: WalletPage,
 });
 
-// Circle Web SDK App ID (safe to expose — like a publishable key)
 const CIRCLE_APP_ID = "1fb6f1fa-488c-51af-b5b0-90f63eec267e";
 
-/** Lazy-load the SDK only in the browser. */
 async function loadCircleSdk() {
   const mod = await import("@circle-fin/w3s-pw-web-sdk");
   return mod.W3SSdk;
@@ -33,8 +31,8 @@ function WalletPage() {
   const qc = useQueryClient();
   const sdkRef = useRef<any>(null);
   const [session, setSession] = useState<{ userToken: string; encryptionKey: string } | null>(null);
+  const initAttempted = useRef(false);
 
-  // Bootstrap: create/lookup Circle user, then acquire a session token
   const bootstrap = useMutation({
     mutationFn: async () => {
       await ensureCircleUser();
@@ -56,7 +54,6 @@ function WalletPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Status: has this user already created their wallet + PIN?
   const statusQ = useQuery({
     queryKey: ["circle-user-status", session?.userToken],
     queryFn: () => getCircleUserStatus({ data: { userToken: session!.userToken } }),
@@ -64,7 +61,6 @@ function WalletPage() {
     refetchInterval: 8000,
   });
 
-  // If wallet exists → sync into our DB to get walletId + address
   const walletsQ = useQuery({
     queryKey: ["circle-wallets", session?.userToken, statusQ.data?.hasWallet],
     queryFn: () => syncMyCircleWallets({ data: { userToken: session!.userToken } }),
@@ -80,7 +76,6 @@ function WalletPage() {
     refetchInterval: 15000,
   });
 
-  // Init wallet challenge (SET_PIN + CREATE_WALLET) → SDK executes it
   const initMut = useMutation({
     mutationFn: async () => {
       const { challengeId } = await initializeCircleWalletChallenge({
@@ -88,7 +83,10 @@ function WalletPage() {
       });
       return new Promise<void>((resolve, reject) => {
         sdkRef.current.execute(challengeId, (error: any, result: any) => {
-          if (error) return reject(new Error(error?.message ?? "Wallet creation cancelled"));
+          if (error) {
+            if (error?.code === 155106) return resolve();
+            return reject(new Error(error?.message ?? "Wallet creation cancelled"));
+          }
           if (result?.status === "COMPLETE") resolve();
           else reject(new Error(`Status: ${result?.status ?? "unknown"}`));
         });
@@ -99,10 +97,32 @@ function WalletPage() {
       await statusQ.refetch();
       qc.invalidateQueries({ queryKey: ["circle-wallets"] });
     },
-    onError: (e: any) => toast.error(e.message ?? "Wallet setup failed"),
+    onError: (e: any) => {
+      if (/155106|already.*initialized/i.test(e?.message ?? "")) {
+        statusQ.refetch();
+        qc.invalidateQueries({ queryKey: ["circle-wallets"] });
+        return;
+      }
+      toast.error(e.message ?? "Wallet setup failed");
+    },
   });
 
-  // Send USDC
+  // Auto-trigger wallet creation when session is ready and user has no wallet
+  useEffect(() => {
+    if (
+      session &&
+      statusQ.data &&
+      !statusQ.data.hasWallet &&
+      !initAttempted.current &&
+      !initMut.isPending &&
+      sdkRef.current
+    ) {
+      initAttempted.current = true;
+      initMut.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, statusQ.data]);
+
   const [dest, setDest] = useState("");
   const [amt, setAmt] = useState("");
   const sendMut = useMutation({
@@ -149,7 +169,7 @@ function WalletPage() {
 
       {notReady && (
         <Card>
-          <EmptyState title="Initializing…" body="Talking to Circle to set up your session." />
+          <EmptyState title="Initializing…" body="Setting up your Circle session." />
         </Card>
       )}
 
@@ -158,31 +178,15 @@ function WalletPage() {
           <CardHead title="Create your wallet" />
           <p className="text-sm text-muted-foreground mb-5">
             Your wallet is <span className="font-medium text-foreground">user-controlled</span> — Archelios never
-            sees your PIN or keys. Circle will guide you through creating a PIN and security questions in a
-            secure iframe. You can also link social login (Google, Apple, or email OTP) from the Circle Console.
+            sees your PIN or keys. Circle will guide you through creating a 6-digit PIN in a secure iframe.
           </p>
           <button
             disabled={initMut.isPending}
-            onClick={() => initMut.mutate()}
+            onClick={() => { initAttempted.current = true; initMut.mutate(); }}
             className="rounded-xl bg-primary text-primary-foreground px-5 py-3 text-sm font-medium disabled:opacity-40"
           >
             {initMut.isPending ? "Opening secure setup…" : "Create wallet with PIN"}
           </button>
-          <div className="mt-6 rounded-xl border border-border bg-secondary/40 p-4 text-xs text-muted-foreground">
-            <p className="font-medium text-foreground mb-1">Social sign-in (Google, Apple, Email OTP)</p>
-            <p>
-              Configure OAuth client IDs and Email OTP in your{" "}
-              <a
-                className="underline"
-                href="https://console.circle.com/wallets/user-controlled"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Circle Console → User-Controlled Wallets → Authentication Methods
-              </a>
-              . Once enabled there, the SDK will offer them alongside PIN automatically.
-            </p>
-          </div>
         </Card>
       )}
 
