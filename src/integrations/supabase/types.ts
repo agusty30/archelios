@@ -117,26 +117,32 @@ export type Database = {
         Row: {
           address: string
           blockchain: string
+          circle_user_id: string | null
           circle_wallet_id: string
           created_at: string
           updated_at: string
           user_id: string
+          wallet_type: string
         }
         Insert: {
           address: string
           blockchain?: string
+          circle_user_id?: string | null
           circle_wallet_id: string
           created_at?: string
           updated_at?: string
           user_id: string
+          wallet_type?: string
         }
         Update: {
           address?: string
           blockchain?: string
+          circle_user_id?: string | null
           circle_wallet_id?: string
           created_at?: string
           updated_at?: string
           user_id?: string
+          wallet_type?: string
         }
         Relationships: []
       }
