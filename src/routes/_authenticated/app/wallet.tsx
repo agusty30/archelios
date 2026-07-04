@@ -1,9 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
-import { getOrCreateMyWallet, getMyWalletBalance, sendFromMyWallet } from "@/lib/user-wallets.functions";
+import {
+  ensureCircleUser,
+  acquireCircleUserSession,
+  getCircleUserStatus,
+  initializeCircleWalletChallenge,
+  syncMyCircleWallets,
+  getMyUserWalletBalance,
+  createUserTransferChallenge,
+} from "@/lib/circle-user-wallets.functions";
 import { PageHeader } from "./route";
 import { Card, CardHead, EmptyState } from "./index";
 
@@ -12,120 +20,293 @@ export const Route = createFileRoute("/_authenticated/app/wallet")({
   component: WalletPage,
 });
 
+// Circle Web SDK App ID (safe to expose — like a publishable key)
+const CIRCLE_APP_ID = "1fb6f1fa-488c-51af-b5b0-90f63eec267e";
+
+/** Lazy-load the SDK only in the browser. */
+async function loadCircleSdk() {
+  const mod = await import("@circle-fin/w3s-pw-web-sdk");
+  return mod.W3SSdk;
+}
+
 function WalletPage() {
   const qc = useQueryClient();
-  const walletQ = useQuery({ queryKey: ["my-wallet"], queryFn: () => getOrCreateMyWallet() });
+  const sdkRef = useRef<any>(null);
+  const [session, setSession] = useState<{ userToken: string; encryptionKey: string } | null>(null);
+
+  // Bootstrap: create/lookup Circle user, then acquire a session token
+  const bootstrap = useMutation({
+    mutationFn: async () => {
+      await ensureCircleUser();
+      return await acquireCircleUserSession();
+    },
+    onSuccess: async (s) => {
+      setSession(s);
+      const W3SSdk = await loadCircleSdk();
+      const sdk = new W3SSdk();
+      sdk.setAppSettings({ appId: CIRCLE_APP_ID });
+      sdk.setAuthentication({ userToken: s.userToken, encryptionKey: s.encryptionKey });
+      sdkRef.current = sdk;
+    },
+    onError: (e: any) => toast.error(e.message ?? "Failed to init Circle session"),
+  });
+
+  useEffect(() => {
+    bootstrap.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Status: has this user already created their wallet + PIN?
+  const statusQ = useQuery({
+    queryKey: ["circle-user-status", session?.userToken],
+    queryFn: () => getCircleUserStatus({ data: { userToken: session!.userToken } }),
+    enabled: !!session?.userToken,
+    refetchInterval: 8000,
+  });
+
+  // If wallet exists → sync into our DB to get walletId + address
+  const walletsQ = useQuery({
+    queryKey: ["circle-wallets", session?.userToken, statusQ.data?.hasWallet],
+    queryFn: () => syncMyCircleWallets({ data: { userToken: session!.userToken } }),
+    enabled: !!session?.userToken && !!statusQ.data?.hasWallet,
+  });
+  const primary = walletsQ.data?.wallets?.[0];
+
   const balQ = useQuery({
-    queryKey: ["my-wallet", "balance", walletQ.data?.walletId],
-    queryFn: () => getMyWalletBalance(),
-    enabled: !!walletQ.data?.walletId,
+    queryKey: ["circle-balance", primary?.id],
+    queryFn: () =>
+      getMyUserWalletBalance({ data: { userToken: session!.userToken, walletId: primary!.id } }),
+    enabled: !!session?.userToken && !!primary?.id,
     refetchInterval: 15000,
   });
 
+  // Init wallet challenge (SET_PIN + CREATE_WALLET) → SDK executes it
+  const initMut = useMutation({
+    mutationFn: async () => {
+      const { challengeId } = await initializeCircleWalletChallenge({
+        data: { userToken: session!.userToken },
+      });
+      return new Promise<void>((resolve, reject) => {
+        sdkRef.current.execute(challengeId, (error: any, result: any) => {
+          if (error) return reject(new Error(error?.message ?? "Wallet creation cancelled"));
+          if (result?.status === "COMPLETE") resolve();
+          else reject(new Error(`Status: ${result?.status ?? "unknown"}`));
+        });
+      });
+    },
+    onSuccess: async () => {
+      toast.success("Wallet created — your keys, your funds.");
+      await statusQ.refetch();
+      qc.invalidateQueries({ queryKey: ["circle-wallets"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Wallet setup failed"),
+  });
+
+  // Send USDC
   const [dest, setDest] = useState("");
   const [amt, setAmt] = useState("");
-
   const sendMut = useMutation({
-    mutationFn: () => sendFromMyWallet({ data: { destinationAddress: dest, amountUsd: parseFloat(amt) } }),
-    onSuccess: (r) => {
-      toast.success(`Sent — ${r.status}`);
-      setDest(""); setAmt("");
-      qc.invalidateQueries({ queryKey: ["my-wallet", "balance"] });
+    mutationFn: async () => {
+      if (!balQ.data?.tokenId) throw new Error("No USDC found. Fund your wallet from the faucet first.");
+      const { challengeId } = await createUserTransferChallenge({
+        data: {
+          userToken: session!.userToken,
+          walletId: primary!.id,
+          tokenId: balQ.data.tokenId,
+          destinationAddress: dest,
+          amountUsd: parseFloat(amt),
+        },
+      });
+      return new Promise<any>((resolve, reject) => {
+        sdkRef.current.execute(challengeId, (error: any, result: any) => {
+          if (error) return reject(new Error(error?.message ?? "Send cancelled"));
+          resolve(result);
+        });
+      });
+    },
+    onSuccess: (r: any) => {
+      toast.success(`Sent — ${r?.status ?? "submitted"}`);
+      setDest("");
+      setAmt("");
+      qc.invalidateQueries({ queryKey: ["circle-balance"] });
     },
     onError: (e: any) => toast.error(e.message ?? "Send failed"),
   });
 
-  const copy = (v: string, label = "Copied") => { navigator.clipboard.writeText(v); toast.success(label); };
+  const copy = (v: string, label = "Copied") => {
+    navigator.clipboard.writeText(v);
+    toast.success(label);
+  };
+
+  const notReady = !session || bootstrap.isPending;
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <PageHeader title="Wallet" subtitle="Your Circle-managed USDC wallet on ARC Testnet." />
+      <PageHeader
+        title="Wallet"
+        subtitle="Your self-custody Circle wallet on ARC Testnet — protected by your PIN, not by us."
+      />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Balance */}
-        <Card className="lg:col-span-2 bg-primary text-primary-foreground border-primary">
-          <p className="text-[11px] uppercase tracking-widest opacity-70">Available balance</p>
-          <p className="mt-3 font-display text-5xl sm:text-6xl tracking-tight tabular-nums">
-            ${balQ.data?.available ?? "—"}
-          </p>
-          <p className="mt-1.5 text-sm opacity-70">USDC · ARC Testnet</p>
-          <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {[
-              { l: "Deposit", to: "#receive" },
-              { l: "Send USDC", to: "#send" },
-              { l: "Bridge", to: "/app/bridge" },
-              { l: "Remit", to: "/app/remittance" },
-            ].map((b) => (
-              <a key={b.l} href={b.to}
-                className="text-center rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 px-3 py-2.5 text-xs font-medium transition">
-                {b.l}
-              </a>
-            ))}
-          </div>
-        </Card>
-
-        {/* Address + QR */}
-        <Card id="receive">
-          <CardHead title="Receive" />
-          {walletQ.data ? (
-            <div className="space-y-4">
-              <div className="rounded-xl bg-white p-4 grid place-items-center border border-border">
-                <QRCodeSVG value={walletQ.data.address} size={140} bgColor="#ffffff" fgColor="#0f1216" />
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Wallet address</p>
-                <p className="mt-1 font-mono text-xs break-all">{walletQ.data.address}</p>
-                <button
-                  onClick={() => copy(walletQ.data!.address, "Address copied")}
-                  className="mt-2 text-xs text-foreground hover:underline"
-                >Copy address</button>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Fund testnet USDC at{" "}
-                <a className="underline" href="https://faucet.circle.com" target="_blank" rel="noreferrer">
-                  faucet.circle.com
-                </a>.
-              </p>
-            </div>
-          ) : (
-            <EmptyState title="Provisioning…" body="We're creating your Circle wallet." />
-          )}
-        </Card>
-      </div>
-
-      {/* Send */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Card id="send">
-          <CardHead title="Send USDC" />
-          <div className="space-y-3">
-            <Field label="Destination address">
-              <input value={dest} onChange={(e) => setDest(e.target.value)} placeholder="0x…"
-                className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm font-mono outline-none focus:ring-2 focus:ring-ring" />
-            </Field>
-            <Field label="Amount (USDC)">
-              <input value={amt} inputMode="decimal" onChange={(e) => setAmt(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0.00"
-                className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm font-mono outline-none focus:ring-2 focus:ring-ring" />
-            </Field>
-            <button
-              disabled={sendMut.isPending || !dest.startsWith("0x") || !(parseFloat(amt) > 0)}
-              onClick={() => sendMut.mutate()}
-              className="w-full rounded-xl bg-primary text-primary-foreground px-4 py-3 text-sm font-medium disabled:opacity-40"
-            >
-              {sendMut.isPending ? "Submitting…" : "Send USDC"}
-            </button>
-          </div>
-        </Card>
-
+      {notReady && (
         <Card>
-          <CardHead title="Wallet info" />
-          <dl className="text-sm space-y-3">
-            <Row label="Network" value="Arc Testnet" />
-            <Row label="Wallet type" value="Circle SCA · Programmable" />
-            <Row label="Wallet ID" value={<span className="font-mono text-xs">{walletQ.data?.walletId?.slice(0, 12)}…</span>} />
-            <Row label="Custody" value="Circle-managed · non-custodial to platform" />
-          </dl>
+          <EmptyState title="Initializing…" body="Talking to Circle to set up your session." />
         </Card>
-      </div>
+      )}
+
+      {session && statusQ.data && !statusQ.data.hasWallet && (
+        <Card className="max-w-2xl">
+          <CardHead title="Create your wallet" />
+          <p className="text-sm text-muted-foreground mb-5">
+            Your wallet is <span className="font-medium text-foreground">user-controlled</span> — Archelios never
+            sees your PIN or keys. Circle will guide you through creating a PIN and security questions in a
+            secure iframe. You can also link social login (Google, Apple, or email OTP) from the Circle Console.
+          </p>
+          <button
+            disabled={initMut.isPending}
+            onClick={() => initMut.mutate()}
+            className="rounded-xl bg-primary text-primary-foreground px-5 py-3 text-sm font-medium disabled:opacity-40"
+          >
+            {initMut.isPending ? "Opening secure setup…" : "Create wallet with PIN"}
+          </button>
+          <div className="mt-6 rounded-xl border border-border bg-secondary/40 p-4 text-xs text-muted-foreground">
+            <p className="font-medium text-foreground mb-1">Social sign-in (Google, Apple, Email OTP)</p>
+            <p>
+              Configure OAuth client IDs and Email OTP in your{" "}
+              <a
+                className="underline"
+                href="https://console.circle.com/wallets/user-controlled"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Circle Console → User-Controlled Wallets → Authentication Methods
+              </a>
+              . Once enabled there, the SDK will offer them alongside PIN automatically.
+            </p>
+          </div>
+        </Card>
+      )}
+
+      {session && statusQ.data?.hasWallet && (
+        <>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Card className="lg:col-span-2 bg-primary text-primary-foreground border-primary">
+              <p className="text-[11px] uppercase tracking-widest opacity-70">Available balance</p>
+              <p className="mt-3 font-display text-5xl sm:text-6xl tracking-tight tabular-nums">
+                ${balQ.data?.available ?? "—"}
+              </p>
+              <p className="mt-1.5 text-sm opacity-70">USDC · ARC Testnet · self-custody</p>
+              <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { l: "Deposit", to: "#receive" },
+                  { l: "Send USDC", to: "#send" },
+                  { l: "Bridge", to: "/app/bridge" },
+                  { l: "Remit", to: "/app/remittance" },
+                ].map((b) => (
+                  <a
+                    key={b.l}
+                    href={b.to}
+                    className="text-center rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 px-3 py-2.5 text-xs font-medium transition"
+                  >
+                    {b.l}
+                  </a>
+                ))}
+              </div>
+            </Card>
+
+            <Card id="receive">
+              <CardHead title="Receive" />
+              {primary?.address ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl bg-white p-4 grid place-items-center border border-border">
+                    <QRCodeSVG value={primary.address} size={140} bgColor="#ffffff" fgColor="#0f1216" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                      Wallet address
+                    </p>
+                    <p className="mt-1 font-mono text-xs break-all">{primary.address}</p>
+                    <button
+                      onClick={() => copy(primary.address, "Address copied")}
+                      className="mt-2 text-xs text-foreground hover:underline"
+                    >
+                      Copy address
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Fund testnet USDC at{" "}
+                    <a
+                      className="underline"
+                      href="https://faucet.circle.com"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      faucet.circle.com
+                    </a>
+                    .
+                  </p>
+                </div>
+              ) : (
+                <EmptyState title="Loading address…" body="Fetching from Circle." />
+              )}
+            </Card>
+          </div>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <Card id="send">
+              <CardHead title="Send USDC" />
+              <div className="space-y-3">
+                <Field label="Destination address">
+                  <input
+                    value={dest}
+                    onChange={(e) => setDest(e.target.value)}
+                    placeholder="0x…"
+                    className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm font-mono outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </Field>
+                <Field label="Amount (USDC)">
+                  <input
+                    value={amt}
+                    inputMode="decimal"
+                    onChange={(e) => setAmt(e.target.value.replace(/[^0-9.]/g, ""))}
+                    placeholder="0.00"
+                    className="w-full rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm font-mono outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </Field>
+                <button
+                  disabled={
+                    sendMut.isPending ||
+                    !dest.startsWith("0x") ||
+                    !(parseFloat(amt) > 0) ||
+                    !primary?.id
+                  }
+                  onClick={() => sendMut.mutate()}
+                  className="w-full rounded-xl bg-primary text-primary-foreground px-4 py-3 text-sm font-medium disabled:opacity-40"
+                >
+                  {sendMut.isPending ? "Enter PIN in the Circle popup…" : "Send USDC (requires PIN)"}
+                </button>
+                <p className="text-[11px] text-muted-foreground">
+                  Circle opens a secure iframe to collect your PIN and sign the transaction. Archelios
+                  never sees your PIN.
+                </p>
+              </div>
+            </Card>
+
+            <Card>
+              <CardHead title="Wallet info" />
+              <dl className="text-sm space-y-3">
+                <Row label="Network" value="Arc Testnet" />
+                <Row label="Wallet type" value="Circle SCA · User-controlled" />
+                <Row
+                  label="Wallet ID"
+                  value={<span className="font-mono text-xs">{primary?.id?.slice(0, 12)}…</span>}
+                />
+                <Row label="Custody" value="You hold the PIN · Archelios cannot move funds" />
+                <Row label="PIN status" value={statusQ.data?.pinStatus} />
+              </dl>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 }
