@@ -86,7 +86,7 @@ function TxDrawer({ tx, onClose }: { tx: any; onClose: () => void }) {
         <Detail label="Fee" value={`$${Number(tx.fee_usd).toFixed(2)}`} />
         <Detail label="Circle tx ID" value={<span className="font-mono text-xs break-all">{tx.circle_tx_id ?? "—"}</span>} />
         <Detail label="Tx hash" value={tx.tx_hash ? (
-          <a className="underline text-xs" href={`https://explorer.testnet.arc.network/tx/${tx.tx_hash}`} target="_blank" rel="noreferrer">
+          <a className="underline text-xs" href={`https://testnet.arcscan.app/tx/${tx.tx_hash}`} target="_blank" rel="noreferrer">
             {tx.tx_hash.slice(0, 20)}…
           </a>
         ) : "Pending"} />

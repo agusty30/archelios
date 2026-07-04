@@ -233,7 +233,7 @@ function SettlementTracker({ id, onReset }: { id: string; onReset: () => void })
           <p className="text-xs text-muted-foreground">${remit?.amount_usd} → {remit?.recipient_name}</p>
         </div>
         {remit?.tx_hash && (
-          <a href={`https://explorer.testnet.arc.network/tx/${remit.tx_hash}`} target="_blank" rel="noreferrer"
+          <a href={`https://testnet.arcscan.app/tx/${remit.tx_hash}`} target="_blank" rel="noreferrer"
             className="text-xs underline">Explorer →</a>
         )}
       </div>
