@@ -45,7 +45,7 @@ function AppShell() {
   const balanceQ = useQuery({
     queryKey: ["my-wallet", "balance", walletQ.data?.walletId],
     queryFn: () => getMyWalletBalance(),
-    enabled: !!walletQ.data?.walletId,
+    enabled: !!walletQ.data?.walletId && walletQ.data.walletId !== "",
     refetchInterval: 20000,
   });
 

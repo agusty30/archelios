@@ -77,17 +77,18 @@ async function getOrCreateUserWalletSet(): Promise<string> {
   return id;
 }
 
-/** Get the signed-in user's Circle wallet, creating one on first call. */
+/** Get the signed-in user's wallet (user-controlled or dev-controlled). */
 export const getOrCreateMyWallet = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
 
-    // 1. Look up existing mapping
     const { data: existing, error: selErr } = await supabase
       .from("user_wallets")
       .select("circle_wallet_id, address, blockchain")
       .eq("user_id", userId)
+      .neq("circle_wallet_id", "")
+      .neq("address", "")
       .maybeSingle();
     if (selErr) throw new Error(selErr.message);
     if (existing) {
@@ -98,39 +99,7 @@ export const getOrCreateMyWallet = createServerFn({ method: "POST" })
       };
     }
 
-    // 2. Create a fresh wallet under the shared User Wallets set
-    const walletSetId = await getOrCreateUserWalletSet();
-    const entitySecretCiphertext = await makeEntitySecretCiphertext();
-    const created = await circleFetch("/v1/w3s/developer/wallets", {
-      method: "POST",
-      body: JSON.stringify({
-        idempotencyKey: crypto.randomUUID(),
-        entitySecretCiphertext,
-        walletSetId,
-        blockchains: [DEFAULT_BLOCKCHAIN],
-        count: 1,
-        accountType: "SCA",
-      }),
-    });
-    const wallet = (created?.data?.wallets ?? [])[0];
-    if (!wallet?.id || !wallet?.address) {
-      throw new Error("Circle returned no wallet");
-    }
-
-    // 3. Persist mapping
-    const { error: insErr } = await supabase.from("user_wallets").insert({
-      user_id: userId,
-      circle_wallet_id: wallet.id,
-      address: wallet.address,
-      blockchain: wallet.blockchain ?? DEFAULT_BLOCKCHAIN,
-    });
-    if (insErr) throw new Error(insErr.message);
-
-    return {
-      walletId: wallet.id as string,
-      address: wallet.address as string,
-      blockchain: (wallet.blockchain ?? DEFAULT_BLOCKCHAIN) as string,
-    };
+    return { walletId: "", address: "", blockchain: DEFAULT_BLOCKCHAIN };
   });
 
 /** USDC balance for the signed-in user's wallet. */
@@ -142,18 +111,23 @@ export const getMyWalletBalance = createServerFn({ method: "GET" })
       .from("user_wallets")
       .select("circle_wallet_id")
       .eq("user_id", userId)
+      .neq("circle_wallet_id", "")
       .maybeSingle();
-    if (!row) return { available: "0.00", currency: "USD", hasWallet: false };
-    const bal = await circleFetch(
-      `/v1/w3s/wallets/${encodeURIComponent(row.circle_wallet_id)}/balances`,
-    );
-    const list = (bal?.data?.tokenBalances ?? []) as any[];
-    const usdc = list.find((x) => (x.token?.symbol || "").toUpperCase() === "USDC");
-    return {
-      available: usdc?.amount ?? "0.00",
-      currency: "USD",
-      hasWallet: true,
-    };
+    if (!row?.circle_wallet_id) return { available: "0.00", currency: "USD", hasWallet: false };
+    try {
+      const bal = await circleFetch(
+        `/v1/w3s/wallets/${encodeURIComponent(row.circle_wallet_id)}/balances`,
+      );
+      const list = (bal?.data?.tokenBalances ?? []) as any[];
+      const usdc = list.find((x) => (x.token?.symbol || "").toUpperCase() === "USDC");
+      return {
+        available: usdc?.amount ?? "0.00",
+        currency: "USD",
+        hasWallet: true,
+      };
+    } catch {
+      return { available: "0.00", currency: "USD", hasWallet: true };
+    }
   });
 
 /** Send USDC from the signed-in user's wallet to a blockchain address. */
