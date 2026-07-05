@@ -41,9 +41,17 @@ function SettingsPage() {
       <Card>
         <h2 className="font-medium mb-4">Wallet</h2>
         <Row label="Network" value="Arc Testnet" />
-        <Row label="Wallet address" value={<span className="font-mono text-xs break-all">{walletQ.data?.address ?? "—"}</span>} />
-        <Row label="Circle wallet ID" value={<span className="font-mono text-xs">{walletQ.data?.walletId?.slice(0, 20)}…</span>} />
-        <Row label="Custody" value="Circle-managed programmable wallet" />
+        <Row label="Wallet address" value={
+          walletQ.data?.address
+            ? <span className="font-mono text-xs break-all">{walletQ.data.address}</span>
+            : <span className="text-muted-foreground">Not created yet — visit Wallet page</span>
+        } />
+        <Row label="Circle wallet ID" value={
+          walletQ.data?.walletId
+            ? <span className="font-mono text-xs">{walletQ.data.walletId.slice(0, 20)}…</span>
+            : <span className="text-muted-foreground">—</span>
+        } />
+        <Row label="Custody" value="User-controlled · PIN secured" />
       </Card>
 
       <Card>
