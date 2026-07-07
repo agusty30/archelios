@@ -177,6 +177,7 @@ export const createRemittance = createServerFn({ method: "POST" })
 export const listRemittances = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    if (!context.supabase?.from) return [];
     const { data, error } = await context.supabase
       .from("remittances")
       .select("*")
@@ -223,6 +224,7 @@ export const refreshRemittanceStatus = createServerFn({ method: "POST" })
 export const getDashboardStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    if (!context.supabase?.from) return { todayVol: 0, monthVol: 0, completed: 0, pending: 0, fees: 0, totalCount: 0, recent: [] };
     const { data: rows } = await context.supabase
       .from("remittances")
       .select("amount_usd, fee_usd, status, created_at");

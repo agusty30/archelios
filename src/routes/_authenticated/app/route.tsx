@@ -41,9 +41,9 @@ function AppShell() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  const walletQ = useQuery({ queryKey: ["my-wallet"], queryFn: () => getOrCreateMyWallet() });
+  const walletQ = useQuery({ queryKey: ["my-wallet"], queryFn: () => getOrCreateMyWallet(), retry: 1 });
   const balanceQ = useQuery({
-    queryKey: ["my-wallet", "balance", walletQ.data?.walletId],
+    queryKey: ["my-wallet", "balance"],
     queryFn: () => getMyWalletBalance(),
     enabled: !!walletQ.data?.walletId && walletQ.data.walletId !== "",
     refetchInterval: 20000,

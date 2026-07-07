@@ -82,22 +82,25 @@ export const getOrCreateMyWallet = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+    if (!supabase?.from) return { walletId: "", address: "", blockchain: DEFAULT_BLOCKCHAIN };
 
-    const { data: existing, error: selErr } = await supabase
-      .from("user_wallets")
-      .select("circle_wallet_id, address, blockchain")
-      .eq("user_id", userId)
-      .neq("circle_wallet_id", "")
-      .neq("address", "")
-      .maybeSingle();
-    if (selErr) throw new Error(selErr.message);
-    if (existing) {
-      return {
-        walletId: existing.circle_wallet_id,
-        address: existing.address,
-        blockchain: existing.blockchain,
-      };
-    }
+    try {
+      const { data: existing } = await supabase
+        .from("user_wallets")
+        .select("circle_wallet_id, address, blockchain")
+        .eq("user_id", userId)
+        .neq("circle_wallet_id", "")
+        .neq("address", "")
+        .maybeSingle();
+
+      if (existing) {
+        return {
+          walletId: existing.circle_wallet_id,
+          address: existing.address,
+          blockchain: existing.blockchain,
+        };
+      }
+    } catch {}
 
     return { walletId: "", address: "", blockchain: DEFAULT_BLOCKCHAIN };
   });
@@ -107,14 +110,15 @@ export const getMyWalletBalance = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data: row } = await supabase
-      .from("user_wallets")
-      .select("circle_wallet_id")
-      .eq("user_id", userId)
-      .neq("circle_wallet_id", "")
-      .maybeSingle();
-    if (!row?.circle_wallet_id) return { available: "0.00", currency: "USD", hasWallet: false };
+    if (!supabase?.from) return { available: "0.00", currency: "USD", hasWallet: false };
     try {
+      const { data: row } = await supabase
+        .from("user_wallets")
+        .select("circle_wallet_id")
+        .eq("user_id", userId)
+        .neq("circle_wallet_id", "")
+        .maybeSingle();
+      if (!row?.circle_wallet_id) return { available: "0.00", currency: "USD", hasWallet: false };
       const bal = await circleFetch(
         `/v1/w3s/wallets/${encodeURIComponent(row.circle_wallet_id)}/balances`,
       );
@@ -126,7 +130,7 @@ export const getMyWalletBalance = createServerFn({ method: "GET" })
         hasWallet: true,
       };
     } catch {
-      return { available: "0.00", currency: "USD", hasWallet: true };
+      return { available: "0.00", currency: "USD", hasWallet: false };
     }
   });
 

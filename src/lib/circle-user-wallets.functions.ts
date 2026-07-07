@@ -84,6 +84,8 @@ export const ensureCircleUser = createServerFn({ method: "POST" })
       if (!isAlreadyExists) throw err;
     }
 
+    if (!supabase?.from) return { circleUserId: userId };
+
     // Store the circle_user_id on the user_wallets mapping row so we can
     // look it up quickly later. We may not yet have any wallet — insert a
     // placeholder row only if none exists for wallet_type = 'USER'.
@@ -147,7 +149,7 @@ export const getCircleUserStatus = createServerFn({ method: "POST" })
     const status = (json?.data?.status ?? "UNKNOWN") as string;
     const pinStatus = (json?.data?.pinStatus ?? "UNSET") as string;
     const securityQuestionStatus = (json?.data?.securityQuestionStatus ?? "UNSET") as string;
-    const hasWallet = status === "ENABLED" || pinStatus === "ENABLED";
+    const hasWallet = pinStatus === "ENABLED";
     return { status, pinStatus, securityQuestionStatus, hasWallet };
   });
 
@@ -194,7 +196,7 @@ export const syncMyCircleWallets = createServerFn({ method: "POST" })
     const json = await circleFetch("/v1/w3s/wallets?pageSize=20", { method: "GET" }, data.userToken);
     const wallets = (json?.data?.wallets ?? []) as any[];
     const primary = wallets.find((w) => w.blockchain === DEFAULT_BLOCKCHAIN) ?? wallets[0];
-    if (primary?.id && primary?.address) {
+    if (primary?.id && primary?.address && supabase?.from) {
       await supabase.from("user_wallets").upsert(
         {
           user_id: userId,

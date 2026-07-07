@@ -10,9 +10,9 @@ export const Route = createFileRoute("/_authenticated/app/")({
 });
 
 function Home() {
-  const statsQ = useQuery({ queryKey: ["dashboard", "stats"], queryFn: () => getDashboardStats(), refetchInterval: 30000 });
-  const balQ = useQuery({ queryKey: ["my-wallet", "balance"], queryFn: () => getMyWalletBalance() });
-  const remQ = useQuery({ queryKey: ["remittances"], queryFn: () => listRemittances(), refetchInterval: 15000 });
+  const statsQ = useQuery({ queryKey: ["dashboard", "stats"], queryFn: () => getDashboardStats(), refetchInterval: 30000, retry: 1 });
+  const balQ = useQuery({ queryKey: ["my-wallet", "balance"], queryFn: () => getMyWalletBalance(), retry: 1 });
+  const remQ = useQuery({ queryKey: ["remittances"], queryFn: () => listRemittances(), refetchInterval: 15000, retry: 1 });
 
   const s = statsQ.data;
   const bal = balQ.data;
