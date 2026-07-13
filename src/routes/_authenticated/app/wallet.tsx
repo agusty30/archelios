@@ -31,22 +31,29 @@ function WalletPage() {
   const qc = useQueryClient();
   const sdkRef = useRef<any>(null);
   const [session, setSession] = useState<{ userToken: string; encryptionKey: string } | null>(null);
+  const [sdkReady, setSdkReady] = useState(false);
   const initAttempted = useRef(false);
 
   const bootstrap = useMutation({
     mutationFn: async () => {
+      setSdkReady(false);
+      sdkRef.current = null;
       await ensureCircleUser();
       return await acquireCircleUserSession();
     },
     onSuccess: async (s) => {
       setSession(s);
       const W3SSdk = await loadCircleSdk();
-      const sdk = new W3SSdk();
-      sdk.setAppSettings({ appId: CIRCLE_APP_ID });
+      const sdk = new W3SSdk({ appSettings: { appId: CIRCLE_APP_ID } });
       sdk.setAuthentication({ userToken: s.userToken, encryptionKey: s.encryptionKey });
       sdkRef.current = sdk;
+      setSdkReady(true);
     },
-    onError: (e: any) => toast.error(e.message ?? "Failed to init Circle session"),
+    onError: (e: any) => {
+      setSdkReady(false);
+      sdkRef.current = null;
+      toast.error(e.message ?? "Failed to init Circle session");
+    },
   });
 
   useEffect(() => {
@@ -78,11 +85,15 @@ function WalletPage() {
 
   const initMut = useMutation({
     mutationFn: async () => {
+      const sdk = sdkRef.current;
+      if (!session?.userToken || !sdkReady || !sdk?.execute) {
+        throw new Error("Circle secure wallet setup is still loading. Please try again.");
+      }
       const { challengeId } = await initializeCircleWalletChallenge({
-        data: { userToken: session!.userToken },
+        data: { userToken: session.userToken },
       });
       return new Promise<void>((resolve, reject) => {
-        sdkRef.current.execute(challengeId, (error: any, result: any) => {
+        sdk.execute(challengeId, (error: any, result: any) => {
           if (error) {
             if (error?.code === 155106) return resolve();
             return reject(new Error(error?.message ?? "Wallet creation cancelled"));
@@ -115,22 +126,27 @@ function WalletPage() {
       !statusQ.data.hasWallet &&
       !initAttempted.current &&
       !initMut.isPending &&
+      sdkReady &&
       sdkRef.current
     ) {
       initAttempted.current = true;
       initMut.mutate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, statusQ.data]);
+  }, [session, statusQ.data, sdkReady]);
 
   const [dest, setDest] = useState("");
   const [amt, setAmt] = useState("");
   const sendMut = useMutation({
     mutationFn: async () => {
+      const sdk = sdkRef.current;
+      if (!session?.userToken || !sdkReady || !sdk?.execute) {
+        throw new Error("Circle secure PIN prompt is still loading. Please try again.");
+      }
       if (!balQ.data?.tokenId) throw new Error("No USDC found. Fund your wallet from the faucet first.");
       const { challengeId } = await createUserTransferChallenge({
         data: {
-          userToken: session!.userToken,
+          userToken: session.userToken,
           walletId: primary!.id,
           tokenId: balQ.data.tokenId,
           destinationAddress: dest,
@@ -138,7 +154,7 @@ function WalletPage() {
         },
       });
       return new Promise<any>((resolve, reject) => {
-        sdkRef.current.execute(challengeId, (error: any, result: any) => {
+        sdk.execute(challengeId, (error: any, result: any) => {
           if (error) return reject(new Error(error?.message ?? "Send cancelled"));
           resolve(result);
         });
@@ -181,11 +197,15 @@ function WalletPage() {
             sees your PIN or keys. Circle will guide you through creating a 6-digit PIN in a secure iframe.
           </p>
           <button
-            disabled={initMut.isPending}
+            disabled={initMut.isPending || !sdkReady}
             onClick={() => { initAttempted.current = true; initMut.mutate(); }}
             className="rounded-xl bg-primary text-primary-foreground px-5 py-3 text-sm font-medium disabled:opacity-40"
           >
-            {initMut.isPending ? "Opening secure setup…" : "Create wallet with PIN"}
+            {!sdkReady
+              ? "Loading secure setup…"
+              : initMut.isPending
+                ? "Opening secure setup…"
+                : "Create wallet with PIN"}
           </button>
         </Card>
       )}
@@ -281,7 +301,8 @@ function WalletPage() {
                     sendMut.isPending ||
                     !dest.startsWith("0x") ||
                     !(parseFloat(amt) > 0) ||
-                    !primary?.id
+                    !primary?.id ||
+                    !sdkReady
                   }
                   onClick={() => sendMut.mutate()}
                   className="w-full rounded-xl bg-primary text-primary-foreground px-4 py-3 text-sm font-medium disabled:opacity-40"
