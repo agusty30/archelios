@@ -164,14 +164,15 @@ export const initializeCircleWalletChallenge = createServerFn({ method: "POST" }
     return d;
   })
   .handler(async ({ data }) => {
-    const entitySecretCiphertext = await makeEntitySecretCiphertext();
+    // NOTE: user-controlled /user/initialize does NOT accept entitySecretCiphertext
+    // (that's for developer-controlled wallets). Only idempotencyKey, accountType,
+    // blockchains, metadata are valid here — sending extra fields fails with 400.
     const json = await circleFetch(
       "/v1/w3s/user/initialize",
       {
         method: "POST",
         body: JSON.stringify({
           idempotencyKey: crypto.randomUUID(),
-          entitySecretCiphertext,
           blockchains: [DEFAULT_BLOCKCHAIN],
           accountType: "SCA",
         }),
