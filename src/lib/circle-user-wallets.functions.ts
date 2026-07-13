@@ -129,9 +129,14 @@ export const acquireCircleUserSession = createServerFn({ method: "POST" })
       method: "POST",
       body: JSON.stringify({ userId }),
     });
+    const userToken = json?.data?.userToken as string | undefined;
+    const encryptionKey = json?.data?.encryptionKey as string | undefined;
+    if (!userToken || !encryptionKey) {
+      throw new Error("Circle session did not return a user token and encryption key");
+    }
     return {
-      userToken: json?.data?.userToken as string,
-      encryptionKey: json?.data?.encryptionKey as string,
+      userToken,
+      encryptionKey,
     };
   });
 
@@ -179,7 +184,9 @@ export const initializeCircleWalletChallenge = createServerFn({ method: "POST" }
       },
       data.userToken,
     );
-    return { challengeId: json?.data?.challengeId as string };
+    const challengeId = json?.data?.challengeId as string | undefined;
+    if (!challengeId) throw new Error("Circle did not return a wallet setup challenge");
+    return { challengeId };
   });
 
 /**
